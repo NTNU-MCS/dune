@@ -548,6 +548,15 @@ namespace Power
           fp32_t tmp = m_args.adc_factors[i][0] * ((unpack[i] / 1024.0) * m_args.adc_ref) + m_args.adc_factors[i][1];
           m_adcs[i]->setValueFP(tmp);
           dispatch(m_adcs[i]);
+
+          if (i == 0)
+          {
+            // Use battery level to send a dummy fuel level.
+            IMC::FuelLevel fuel;
+            fuel.value = (tmp - 20.0) * 10.0;
+            fuel.confidence = 50.0;
+            dispatch(fuel);
+          }
         }
       }
 
