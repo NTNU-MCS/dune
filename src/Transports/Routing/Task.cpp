@@ -482,7 +482,7 @@ namespace Transports
         Algorithms::CRC8 crc(c_poly);
 
         IMC::UamTxFrame frame;
-        frame.setDestination(resolveSystemName(sys));//this part is changed
+        frame.setDestination(getSystemId());
         frame.sys_dst = sys;
         frame.seq = m_seq++;
         frame.flags = ack ? IMC::UamTxFrame::UTF_ACK : 0;
@@ -659,9 +659,9 @@ namespace Transports
         Report dat;
         std::memcpy(&dat, &msg->data[2], sizeof(dat));
 
-        //If report is coming from another system add as neighbour
-        if(msg->getSource()!=getSystemId())
-          addNeighbour(msg->getSource(),dat);
+        // If report is coming from another system add as neighbour
+        if (imc_src != getSystemId())
+          addNeighbour(imc_src, dat);
 
         IMC::EstimatedState es;
         es.setSource(imc_src);
