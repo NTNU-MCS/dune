@@ -549,7 +549,7 @@ namespace Power
           m_adcs[i]->setValueFP(tmp);
           dispatch(m_adcs[i]);
 
-          if (i == 0)
+          if (i == 2)
           {
             // Use battery level to send a dummy fuel level.
             IMC::FuelLevel fuel;
