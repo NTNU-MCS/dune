@@ -57,6 +57,8 @@ namespace Transports
       uint8_t fuel_level;
       uint8_t fuel_conf;
       float weight;
+      float dist_from_sink;
+      bool forward;//true for forward neighbors, false  for back neighbors
     };
 
     struct Data
@@ -96,6 +98,15 @@ namespace Transports
       double report_period;
       //! Data period.
       double data_period;
+      //! sink lat
+      float sink_lat;
+      //! sink lon
+      float sink_lon;
+      //! if sink is in the neighborhood
+      bool sink_is_my_neighbour;
+      //!ID of the sink
+      //uint16_t sink_id;
+      std::string sys_sink;
     };
 
     struct Task: public DUNE::Tasks::Task
@@ -104,6 +115,7 @@ namespace Transports
       struct Node m_neighbours[5];
       int m_where_is;
       unsigned m_neighbour_count;
+    
       //! Estimated state.
       IMC::EstimatedState m_estate;
       //! Report timer.
@@ -127,9 +139,10 @@ namespace Transports
       //! Task arguments.
       Arguments m_args;
 
-      /************TEMP AND DENS*********************/
+      /************TEMP AND DENS and dist from sink*********************/
       float m_temperature;
       float m_density;
+      float m_dist_from_sink;
       /**********TEMP AND DENS END********************/
 
       //! Constructor.
@@ -165,6 +178,28 @@ namespace Transports
         .minimumValue("100")
         .maximumValue("1500")
         .description("Data periodicity");
+
+        param(DTR_RT("Sink Lat"), m_args.sink_lat)
+        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        .defaultValue("0.0")
+        .description("Sink Latitude");
+
+        param(DTR_RT("Sink Lon"), m_args.sink_lon)
+        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        .defaultValue("0.0")
+        .description("Sink Longitude");
+
+        param(DTR_RT("Sink Neighbor"), m_args.sink_is_my_neighbour)
+        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        .defaultValue("false")
+        .description("If the sink is in the neighborhood");
+
+
+        param(DTR_RT("Sink"), m_args.sys_sink)
+        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        .defaultValue("0")
+        .description("Name of the sink node");
+
 
         m_where_is = -1;
         m_neighbour_count = 0;
@@ -238,6 +273,8 @@ namespace Transports
           return;
 
         m_estate = *msg;
+	m_dist_from_sink = WGS84::distance((float)m_estate.lat, (float)m_estate.lon, 0.0,
+                                           (float)m_args.sink_lat, (float) m_args.sink_lon,0.0);
       }
 
       void
@@ -698,7 +735,17 @@ namespace Transports
         std::memcpy(&data[1], &dat, sizeof(dat));
 
         // destination be decided by find forwarder by the function findForwarder()
-        sendFrameData(resolveSystemId(findForwarder()), data, false);
+        //sendFrameData(resolveSystemId(findForwarder()), data, false);
+        if(!m_args.sink_is_my_neighbour){
+          //check if node has at least one neighbor
+          if(m_neighbour_count>0)
+          {
+            sendFrameData(resolveSystemId(findForwarder()), data, false);
+          }
+         } else {
+           sendFrameData(m_args.sys_sink, data, false); 
+         }
+
       }
       /****************SEND DATA END**************/
 
@@ -716,8 +763,16 @@ namespace Transports
         data[0] = CODE_DATA;
 
         std::memcpy(&data[1], &dat, sizeof(dat));
-
-        sendFrameData(resolveSystemId(findForwarder()), data, false);
+	
+        if(!m_args.sink_is_my_neighbour){
+  	  //check if node has at least one neighbor
+	  if(m_neighbour_count>0)
+	  {
+       	    sendFrameData(resolveSystemId(findForwarder()), data, false);
+ 	  }
+	} else {
+	   sendFrameData(m_args.sys_sink, data, false); 
+	}
         /*
           checkThreshold(dat);
 
@@ -757,12 +812,14 @@ namespace Transports
         bestWeight = m_neighbours[0].weight;
         for (i = 1; i < m_neighbour_count ; i++)
         {
-          if (m_neighbours[i].weight < bestWeight)
-          {
-            bestWeight = m_neighbours[i].weight;
-            best = i;
+	  if(m_neighbours[i].forward == true){
+            if (m_neighbours[i].weight < bestWeight)
+            {
+              bestWeight = m_neighbours[i].weight;
+              best = i;
+            }
           }
-        }
+	 }
 
         return m_neighbours[best].id;
       }
@@ -774,16 +831,16 @@ namespace Transports
       float
       calcWeight(Report dat)
       {
-        float dist, latDif, lonDif, depDif;
-        double lat = 0;
-        double lon = 0;
-        Coordinates::toWGS84(m_estate, lat, lon);
+        float dist,depDif;
         uint8_t depth = (uint8_t)m_estate.depth;
 
-        latDif = std::fabs(dat.lat - lat);
-        lonDif = std::fabs(dat.lon - lon);
+	double lat = 0;
+        double lon = 0;
+        Coordinates::toWGS84(m_estate, lat, lon);
+
+	dist = WGS84::distance((float)dat.lat,(float)dat.lon,0.0,
+                               (float)lat,(float)lon,0.0);
         depDif = std::abs(dat.depth - depth);
-        dist = std::sqrt((latDif * latDif) + (lonDif * lonDif));
         return ((dist + depDif) * (1 / float(dat.fuel_level)));
       }
       /************CALC WEIGHT END*************/
@@ -793,12 +850,14 @@ namespace Transports
       addNeighbour(uint16_t src, Report dat)
       {
         bool exists = searchNeighbour(src);
-
+	float dist;
+	dist = Coordinates::WGS84::distance(dat.lat,dat.lon,0.0,m_args.sink_lat,m_args.sink_lon,0.0); 
         if(!exists)
         {
           //if neighbour is not in the list
           inf("this one does not exist");
           Node newNeighbour;
+	  newNeighbour.forward = false;//default
           newNeighbour.id=src;
           //                    newNeighbour.timestamp=msg->getTimeStamp();
           newNeighbour.lat=dat.lat;
@@ -810,6 +869,8 @@ namespace Transports
           newNeighbour.fuel_level= dat.fuel_level;
           newNeighbour.fuel_conf=dat.fuel_conf;
           newNeighbour.weight=calcWeight(dat);
+	  newNeighbour.dist_from_sink = dist;
+	  if(m_dist_from_sink > dist) newNeighbour.forward = true;
           m_neighbours[m_neighbour_count]=newNeighbour;
           m_neighbour_count++;
           inf("I have %u neighbors",m_neighbour_count);
@@ -830,6 +891,9 @@ namespace Transports
           m_neighbours[m_where_is].fuel_level= dat.fuel_level;
           m_neighbours[m_where_is].fuel_conf=dat.fuel_conf;
           m_neighbours[m_where_is].weight=calcWeight(dat);
+          m_neighbours[m_where_is].dist_from_sink = dist;
+	  if(m_dist_from_sink > dist) m_neighbours[m_where_is].forward = true;
+
         }
       }
       /****************ADD NEIGHBOR END************/
@@ -890,6 +954,7 @@ namespace Transports
           if (m_data_timer.overflow())
           {
             m_data_timer.reset();
+	    if(m_neighbour_count>0)
             sendData();
           }
         }
