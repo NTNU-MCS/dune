@@ -104,9 +104,12 @@ namespace Transports
       float sink_lon;
       //! if sink is in the neighborhood
       bool sink_is_my_neighbour;
-      //!ID of the sink
-      //uint16_t sink_id;
+      //! ID of the sink
       std::string sys_sink;
+      //! Fixed latitude.
+      double lat;
+      //! Fixed longitude.
+      double lon;
     };
 
     struct Task: public DUNE::Tasks::Task
@@ -115,7 +118,6 @@ namespace Transports
       struct Node m_neighbours[5];
       int m_where_is;
       unsigned m_neighbour_count;
-    
       //! Estimated state.
       IMC::EstimatedState m_estate;
       //! Report timer.
@@ -179,27 +181,29 @@ namespace Transports
         .maximumValue("1500")
         .description("Data periodicity");
 
-        param(DTR_RT("Sink Lat"), m_args.sink_lat)
-        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        param("Sink Lat", m_args.sink_lat)
         .defaultValue("0.0")
         .description("Sink Latitude");
 
-        param(DTR_RT("Sink Lon"), m_args.sink_lon)
-        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        param("Sink Lon", m_args.sink_lon)
         .defaultValue("0.0")
         .description("Sink Longitude");
 
-        param(DTR_RT("Sink Neighbor"), m_args.sink_is_my_neighbour)
-        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        param("Sink Neighbor", m_args.sink_is_my_neighbour)
         .defaultValue("false")
         .description("If the sink is in the neighborhood");
 
-
-        param(DTR_RT("Sink"), m_args.sys_sink)
-        .visibility(Tasks::Parameter::VISIBILITY_USER)
+        param("Sink", m_args.sys_sink)
         .defaultValue("0")
         .description("Name of the sink node");
 
+        param("System Lat", m_args.lat)
+        .defaultValue("0.0")
+        .description("System Latitude");
+
+        param("System Lon", m_args.lon)
+        .defaultValue("0.0")
+        .description("System Longitude");
 
         m_where_is = -1;
         m_neighbour_count = 0;
@@ -228,6 +232,10 @@ namespace Transports
           m_rep_timer.setTop(m_args.report_period);
           m_data_timer.setTop(m_args.data_period);
         }
+
+        m_dist_from_sink = WGS84::distance((float)m_args.lat, (float)m_args.lon, 0.0,
+                                           (float)m_args.sink_lat, (float) m_args.sink_lon,0.0);
+
       }
 
       //! Initialize resources.
@@ -273,7 +281,7 @@ namespace Transports
           return;
 
         m_estate = *msg;
-	m_dist_from_sink = WGS84::distance((float)m_estate.lat, (float)m_estate.lon, 0.0,
+	m_dist_from_sink = WGS84::distance((float)m_args.lat, (float)m_args.lon, 0.0,
                                            (float)m_args.sink_lat, (float) m_args.sink_lon,0.0);
       }
 
