@@ -211,6 +211,12 @@
  */
 typedef unsigned long DWORD_PTR;
 #endif
+#if defined(_MSC_VER) && _MSC_VER >= 1900 && !defined(_CRT_NO_TIME_T)
+/*
+ * VC++14 Is incompatible with pthreads-win32. Patch added below.
+ */
+	#define _TIMESPEC_DEFINED
+#endif
 /*
  * -----------------
  * autoconf switches

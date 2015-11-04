@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: b6cb49aa5642d80650daf495a50ba0dd                            *
+// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_MACROS_HPP_INCLUDED_
@@ -518,5 +518,29 @@
 #define DUNE_IMC_NECMSG 2001
 //! JsonObject identification number.
 #define DUNE_IMC_JSONOBJECT 2002
+//! HighpassControlParcel identification number.
+#define DUNE_IMC_HIGHPASSCONTROLPARCEL 1900
+//! ReconStatus identification number.
+#define DUNE_IMC_RECONSTATUS 1901
+//! ReconCommand identification number.
+#define DUNE_IMC_RECONCOMMAND 1902
+//! DvlRanges identification number.
+#define DUNE_IMC_DVLRANGES 1903
+//! ReconMessage identification number.
+#define DUNE_IMC_RECONMESSAGE 1904
+//! ReconControlState identification number.
+#define DUNE_IMC_RECONCONTROLSTATE 1905
+//! AdotDebug identification number.
+#define DUNE_IMC_ADOTDEBUG 1910
+//! SimulatedTime identification number.
+#define DUNE_IMC_SIMULATEDTIME 1920
+//! ReconDesiredHeadingAngle identification number.
+#define DUNE_IMC_RECONDESIREDHEADINGANGLE 1930
+//! ReconDesiredHeadingWaypoint identification number.
+#define DUNE_IMC_RECONDESIREDHEADINGWAYPOINT 1931
+//! ReconDesiredSpeed identification number.
+#define DUNE_IMC_RECONDESIREDSPEED 1932
+//! ReconDesiredZ identification number.
+#define DUNE_IMC_RECONDESIREDZ 1933
 
 #endif

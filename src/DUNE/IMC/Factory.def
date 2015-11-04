@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: b6cb49aa5642d80650daf495a50ba0dd                            *
+// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
 //***************************************************************************
 
 MESSAGE(1, EntityState)
@@ -272,4 +272,16 @@ MESSAGE(893, ParametersXml)
 MESSAGE(894, GetParametersXml)
 MESSAGE(2001, NecMsg)
 MESSAGE(2002, JsonObject)
+MESSAGE(1900, HighpassControlParcel)
+MESSAGE(1901, ReconStatus)
+MESSAGE(1902, ReconCommand)
+MESSAGE(1903, DvlRanges)
+MESSAGE(1904, ReconMessage)
+MESSAGE(1905, ReconControlState)
+MESSAGE(1910, AdotDebug)
+MESSAGE(1920, SimulatedTime)
+MESSAGE(1930, ReconDesiredHeadingAngle)
+MESSAGE(1931, ReconDesiredHeadingWaypoint)
+MESSAGE(1932, ReconDesiredSpeed)
+MESSAGE(1933, ReconDesiredZ)
 #undef MESSAGE
