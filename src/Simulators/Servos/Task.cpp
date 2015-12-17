@@ -214,6 +214,7 @@ namespace Simulators
       consume(const IMC::SimulatedState* msg)
       {
         (void)msg;
+				float diff;
 
         if (!m_args.limit_rate)
           return;
@@ -224,7 +225,10 @@ namespace Simulators
         {
           if (m_servo_in_fault != (int)i)
           {
-            float diff = m_commands[i].value - m_positions[i].value;
+						if (isnan(m_commands[i].value))
+							diff = -m_positions[i].value;
+						else
+							diff = m_commands[i].value - m_positions[i].value;
 
             diff = trimValue(diff, -max_rot, max_rot);
 
