@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
+// IMC XML MD5: aec372a00cc4f4ac5d8aa5f1bbe6eac7                            *
 //***************************************************************************
 
 MESSAGE(1, EntityState)
@@ -272,16 +272,17 @@ MESSAGE(893, ParametersXml)
 MESSAGE(894, GetParametersXml)
 MESSAGE(2001, NecMsg)
 MESSAGE(2002, JsonObject)
-MESSAGE(1900, HighpassControlParcel)
-MESSAGE(1901, ReconStatus)
-MESSAGE(1902, ReconCommand)
-MESSAGE(1903, DvlRanges)
-MESSAGE(1904, ReconMessage)
-MESSAGE(1905, ReconControlState)
-MESSAGE(1910, AdotDebug)
-MESSAGE(1920, SimulatedTime)
-MESSAGE(1930, ReconDesiredHeadingAngle)
-MESSAGE(1931, ReconDesiredHeadingWaypoint)
-MESSAGE(1932, ReconDesiredSpeed)
-MESSAGE(1933, ReconDesiredZ)
+MESSAGE(6001, HighpassControlParcel)
+MESSAGE(6002, ReconStatus)
+MESSAGE(6003, ReconCommand)
+MESSAGE(6004, DvlRanges)
+MESSAGE(6005, ReconMessage)
+MESSAGE(6006, ReconControlState)
+MESSAGE(6007, AdotDebug)
+MESSAGE(6008, SimulatedTime)
+MESSAGE(6009, ReconDesiredHeadingAngle)
+MESSAGE(6010, ReconDesiredHeadingWaypoint)
+MESSAGE(6011, ReconDesiredSpeed)
+MESSAGE(6012, ReconDesiredZ)
+MESSAGE(6013, SimulatedDynamicEnvironment)
 #undef MESSAGE

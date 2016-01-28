@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
+// IMC XML MD5: aec372a00cc4f4ac5d8aa5f1bbe6eac7                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_DEFINITIONS_HPP_INCLUDED_
@@ -5739,7 +5739,9 @@ namespace DUNE
         //! Echo Sounder.
         ST_ECHOSOUNDER = 1,
         //! Multibeam.
-        ST_MULTIBEAM = 2
+        ST_MULTIBEAM = 2,
+        //! Dvl.
+        ST_DVL = 3
       };
 
       //! Type.
@@ -19443,7 +19445,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1900;
+        return 6001;
       }
 
       HighpassControlParcel(void);
@@ -19550,7 +19552,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1901;
+        return 6002;
       }
 
       ReconStatus(void);
@@ -19619,7 +19621,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1902;
+        return 6003;
       }
 
       ReconCommand(void);
@@ -19703,7 +19705,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1903;
+        return 6004;
       }
 
       DvlRanges(void);
@@ -19775,7 +19777,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1904;
+        return 6005;
       }
 
       ReconMessage(void);
@@ -19851,7 +19853,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1905;
+        return 6006;
       }
 
       ReconControlState(void);
@@ -19936,7 +19938,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1910;
+        return 6007;
       }
 
       AdotDebug(void);
@@ -19999,7 +20001,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1920;
+        return 6008;
       }
 
       SimulatedTime(void);
@@ -20060,7 +20062,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1930;
+        return 6009;
       }
 
       ReconDesiredHeadingAngle(void);
@@ -20129,7 +20131,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1931;
+        return 6010;
       }
 
       ReconDesiredHeadingWaypoint(void);
@@ -20190,7 +20192,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1932;
+        return 6011;
       }
 
       ReconDesiredSpeed(void);
@@ -20257,7 +20259,7 @@ namespace DUNE
       static uint16_t
       getIdStatic(void)
       {
-        return 1933;
+        return 6012;
       }
 
       ReconDesiredZ(void);
@@ -20309,6 +20311,81 @@ namespace DUNE
 
       void
       setValueFP(fp64_t val);
+
+      void
+      fieldsToJSON(std::ostream& os__, unsigned nindent__) const;
+    };
+
+    //! Dynamic environment.
+    class SimulatedDynamicEnvironment: public Message
+    {
+    public:
+      //! Dynamic Environment Type.
+      uint8_t environmenttypeid;
+      //! Identifier.
+      uint8_t id;
+      //! North position.
+      fp32_t x;
+      //! East position.
+      fp32_t y;
+      //! Heading.
+      fp64_t psi;
+      //! Surge velocity.
+      fp32_t u;
+      //! Sway velocity.
+      fp32_t v;
+      //! Heading rate.
+      fp64_t r;
+
+      static uint16_t
+      getIdStatic(void)
+      {
+        return 6013;
+      }
+
+      SimulatedDynamicEnvironment(void);
+
+      Message*
+      clone(void) const
+      {
+        return new SimulatedDynamicEnvironment(*this);
+      }
+
+      void
+      clear(void);
+
+      bool
+      fieldsEqual(const Message& msg__) const;
+
+      int
+      validate(void) const;
+
+      uint8_t*
+      serializeFields(uint8_t* bfr__) const;
+
+      uint16_t
+      deserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      getId(void) const
+      {
+        return SimulatedDynamicEnvironment::getIdStatic();
+      }
+
+      const char*
+      getName(void) const
+      {
+        return "SimulatedDynamicEnvironment";
+      }
+
+      unsigned
+      getFixedSerializationSize(void) const
+      {
+        return 34;
+      }
 
       void
       fieldsToJSON(std::ostream& os__, unsigned nindent__) const;

@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
+// IMC XML MD5: aec372a00cc4f4ac5d8aa5f1bbe6eac7                            *
 //***************************************************************************
 
 // ISO C++ 98 headers.
@@ -20269,7 +20269,7 @@ namespace DUNE
 
     HighpassControlParcel::HighpassControlParcel(void)
     {
-      m_header.mgid = 1900;
+      m_header.mgid = 6001;
       clear();
     }
 
@@ -20355,7 +20355,7 @@ namespace DUNE
 
     ReconStatus::ReconStatus(void)
     {
-      m_header.mgid = 1901;
+      m_header.mgid = 6002;
       clear();
     }
 
@@ -20549,7 +20549,7 @@ namespace DUNE
 
     ReconCommand::ReconCommand(void)
     {
-      m_header.mgid = 1902;
+      m_header.mgid = 6003;
       clear();
     }
 
@@ -20629,7 +20629,7 @@ namespace DUNE
 
     DvlRanges::DvlRanges(void)
     {
-      m_header.mgid = 1903;
+      m_header.mgid = 6004;
       clear();
     }
 
@@ -20709,7 +20709,7 @@ namespace DUNE
 
     ReconMessage::ReconMessage(void)
     {
-      m_header.mgid = 1904;
+      m_header.mgid = 6005;
       clear();
     }
 
@@ -20771,7 +20771,7 @@ namespace DUNE
 
     ReconControlState::ReconControlState(void)
     {
-      m_header.mgid = 1905;
+      m_header.mgid = 6006;
       clear();
     }
 
@@ -20827,7 +20827,7 @@ namespace DUNE
 
     AdotDebug::AdotDebug(void)
     {
-      m_header.mgid = 1910;
+      m_header.mgid = 6007;
       clear();
     }
 
@@ -20955,7 +20955,7 @@ namespace DUNE
 
     SimulatedTime::SimulatedTime(void)
     {
-      m_header.mgid = 1920;
+      m_header.mgid = 6008;
       clear();
     }
 
@@ -21017,7 +21017,7 @@ namespace DUNE
 
     ReconDesiredHeadingAngle::ReconDesiredHeadingAngle(void)
     {
-      m_header.mgid = 1930;
+      m_header.mgid = 6009;
       clear();
     }
 
@@ -21085,7 +21085,7 @@ namespace DUNE
 
     ReconDesiredHeadingWaypoint::ReconDesiredHeadingWaypoint(void)
     {
-      m_header.mgid = 1931;
+      m_header.mgid = 6010;
       clear();
     }
 
@@ -21147,7 +21147,7 @@ namespace DUNE
 
     ReconDesiredSpeed::ReconDesiredSpeed(void)
     {
-      m_header.mgid = 1932;
+      m_header.mgid = 6011;
       clear();
     }
 
@@ -21215,7 +21215,7 @@ namespace DUNE
 
     ReconDesiredZ::ReconDesiredZ(void)
     {
-      m_header.mgid = 1933;
+      m_header.mgid = 6012;
       clear();
     }
 
@@ -21279,6 +21279,104 @@ namespace DUNE
     ReconDesiredZ::fieldsToJSON(std::ostream& os__, unsigned nindent__) const
     {
       IMC::toJSON(os__, "value", value, nindent__);
+    }
+
+    SimulatedDynamicEnvironment::SimulatedDynamicEnvironment(void)
+    {
+      m_header.mgid = 6013;
+      clear();
+    }
+
+    void
+    SimulatedDynamicEnvironment::clear(void)
+    {
+      environmenttypeid = 0;
+      id = 0;
+      x = 0;
+      y = 0;
+      psi = 0;
+      u = 0;
+      v = 0;
+      r = 0;
+    }
+
+    bool
+    SimulatedDynamicEnvironment::fieldsEqual(const Message& msg__) const
+    {
+      const IMC::SimulatedDynamicEnvironment& other__ = static_cast<const SimulatedDynamicEnvironment&>(msg__);
+      if (environmenttypeid != other__.environmenttypeid) return false;
+      if (id != other__.id) return false;
+      if (x != other__.x) return false;
+      if (y != other__.y) return false;
+      if (psi != other__.psi) return false;
+      if (u != other__.u) return false;
+      if (v != other__.v) return false;
+      if (r != other__.r) return false;
+      return true;
+    }
+
+    int
+    SimulatedDynamicEnvironment::validate(void) const
+    {
+      return false;
+    }
+
+    uint8_t*
+    SimulatedDynamicEnvironment::serializeFields(uint8_t* bfr__) const
+    {
+      uint8_t* ptr__ = bfr__;
+      ptr__ += IMC::serialize(environmenttypeid, ptr__);
+      ptr__ += IMC::serialize(id, ptr__);
+      ptr__ += IMC::serialize(x, ptr__);
+      ptr__ += IMC::serialize(y, ptr__);
+      ptr__ += IMC::serialize(psi, ptr__);
+      ptr__ += IMC::serialize(u, ptr__);
+      ptr__ += IMC::serialize(v, ptr__);
+      ptr__ += IMC::serialize(r, ptr__);
+      return ptr__;
+    }
+
+    uint16_t
+    SimulatedDynamicEnvironment::deserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(environmenttypeid, bfr__, size__);
+      bfr__ += IMC::deserialize(id, bfr__, size__);
+      bfr__ += IMC::deserialize(x, bfr__, size__);
+      bfr__ += IMC::deserialize(y, bfr__, size__);
+      bfr__ += IMC::deserialize(psi, bfr__, size__);
+      bfr__ += IMC::deserialize(u, bfr__, size__);
+      bfr__ += IMC::deserialize(v, bfr__, size__);
+      bfr__ += IMC::deserialize(r, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    uint16_t
+    SimulatedDynamicEnvironment::reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(environmenttypeid, bfr__, size__);
+      bfr__ += IMC::deserialize(id, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(x, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(y, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(psi, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(u, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(v, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(r, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    void
+    SimulatedDynamicEnvironment::fieldsToJSON(std::ostream& os__, unsigned nindent__) const
+    {
+      IMC::toJSON(os__, "environmenttypeid", environmenttypeid, nindent__);
+      IMC::toJSON(os__, "id", id, nindent__);
+      IMC::toJSON(os__, "x", x, nindent__);
+      IMC::toJSON(os__, "y", y, nindent__);
+      IMC::toJSON(os__, "psi", psi, nindent__);
+      IMC::toJSON(os__, "u", u, nindent__);
+      IMC::toJSON(os__, "v", v, nindent__);
+      IMC::toJSON(os__, "r", r, nindent__);
     }
   }
 }

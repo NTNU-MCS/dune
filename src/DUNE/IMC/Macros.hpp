@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: a788d487547949cd3e9f75b604c60fbc                            *
+// IMC XML MD5: aec372a00cc4f4ac5d8aa5f1bbe6eac7                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_MACROS_HPP_INCLUDED_
@@ -519,28 +519,30 @@
 //! JsonObject identification number.
 #define DUNE_IMC_JSONOBJECT 2002
 //! HighpassControlParcel identification number.
-#define DUNE_IMC_HIGHPASSCONTROLPARCEL 1900
+#define DUNE_IMC_HIGHPASSCONTROLPARCEL 6001
 //! ReconStatus identification number.
-#define DUNE_IMC_RECONSTATUS 1901
+#define DUNE_IMC_RECONSTATUS 6002
 //! ReconCommand identification number.
-#define DUNE_IMC_RECONCOMMAND 1902
+#define DUNE_IMC_RECONCOMMAND 6003
 //! DvlRanges identification number.
-#define DUNE_IMC_DVLRANGES 1903
+#define DUNE_IMC_DVLRANGES 6004
 //! ReconMessage identification number.
-#define DUNE_IMC_RECONMESSAGE 1904
+#define DUNE_IMC_RECONMESSAGE 6005
 //! ReconControlState identification number.
-#define DUNE_IMC_RECONCONTROLSTATE 1905
+#define DUNE_IMC_RECONCONTROLSTATE 6006
 //! AdotDebug identification number.
-#define DUNE_IMC_ADOTDEBUG 1910
+#define DUNE_IMC_ADOTDEBUG 6007
 //! SimulatedTime identification number.
-#define DUNE_IMC_SIMULATEDTIME 1920
+#define DUNE_IMC_SIMULATEDTIME 6008
 //! ReconDesiredHeadingAngle identification number.
-#define DUNE_IMC_RECONDESIREDHEADINGANGLE 1930
+#define DUNE_IMC_RECONDESIREDHEADINGANGLE 6009
 //! ReconDesiredHeadingWaypoint identification number.
-#define DUNE_IMC_RECONDESIREDHEADINGWAYPOINT 1931
+#define DUNE_IMC_RECONDESIREDHEADINGWAYPOINT 6010
 //! ReconDesiredSpeed identification number.
-#define DUNE_IMC_RECONDESIREDSPEED 1932
+#define DUNE_IMC_RECONDESIREDSPEED 6011
 //! ReconDesiredZ identification number.
-#define DUNE_IMC_RECONDESIREDZ 1933
+#define DUNE_IMC_RECONDESIREDZ 6012
+//! SimulatedDynamicEnvironment identification number.
+#define DUNE_IMC_SIMULATEDDYNAMICENVIRONMENT 6013
 
 #endif
