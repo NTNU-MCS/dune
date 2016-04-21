@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: aec372a00cc4f4ac5d8aa5f1bbe6eac7                            *
+// IMC XML MD5: 903b5c88baf8d7d37c869a16edd28622                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_DEFINITIONS_HPP_INCLUDED_
@@ -20336,6 +20336,30 @@ namespace DUNE
       fp32_t v;
       //! Heading rate.
       fp64_t r;
+      //! AUV North position.
+      fp32_t x_auv;
+      //! AUV East position.
+      fp32_t y_auv;
+      //! AUV Down position.
+      fp32_t z_auv;
+      //! AUV Roll.
+      fp64_t phi_auv;
+      //! AUV Pitch.
+      fp64_t theta_auv;
+      //! AUV Heading.
+      fp64_t psi_auv;
+      //! AUV Surge velocity.
+      fp32_t u_auv;
+      //! AUV Sway velocity.
+      fp32_t v_auv;
+      //! AUV Heave velocity.
+      fp32_t w_auv;
+      //! AUV Roll rate.
+      fp64_t p_auv;
+      //! AUV Pitch rate.
+      fp64_t q_auv;
+      //! AUV Heading rate.
+      fp64_t r_auv;
 
       static uint16_t
       getIdStatic(void)
@@ -20384,7 +20408,7 @@ namespace DUNE
       unsigned
       getFixedSerializationSize(void) const
       {
-        return 34;
+        return 106;
       }
 
       void
