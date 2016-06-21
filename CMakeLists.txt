@@ -280,6 +280,11 @@ foreach(program ${programs})
   dune_program(${program} 1)
 endforeach(program ${programs})
 
+file(GLOB programs user/programs/*.cpp)
+foreach(program ${programs})
+  dune_program(${program} 1)
+endforeach(program ${programs})
+
 file(GLOB programs programs/utils/*.cpp)
 foreach(program ${programs})
   dune_program(${program} 0)
