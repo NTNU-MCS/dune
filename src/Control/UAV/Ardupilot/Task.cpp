@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2015 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -179,9 +179,6 @@ namespace Control
         IMC::DesiredPath m_dpath;
         //! DesiredPath message
         IMC::ControlLoops m_controllps;
-        //! Localization origin (WGS-84)
-        fp64_t m_ref_lat, m_ref_lon;
-        fp32_t m_ref_hae;
         //! TCP socket
         Network::TCPSocket* m_TCP_sock;
         //! System ID
@@ -192,6 +189,8 @@ namespace Control
         float m_hae_msl;
         //! Height offset to convert to WGS-84 ellipsoid.
         float m_hae_offset;
+        //! Flag indicating task is booting.
+        bool m_reboot;
         //! External control
         bool m_external;
         //! Current waypoint
@@ -226,15 +225,13 @@ namespace Control
 
         Task(const std::string& name, Tasks::Context& ctx):
           Tasks::Task(name, ctx),
-          m_ref_lat(0.0),
-          m_ref_lon(0.0),
-          m_ref_hae(0.0),
           m_TCP_sock(NULL),
           m_sysid(1),
           m_lat(0.0),
           m_lon(0.0),
           m_hae_msl(0.0),
           m_hae_offset(0.0),
+          m_reboot(true),
           m_external(true),
           m_current_wp(0),
           m_critical(false),
@@ -416,6 +413,7 @@ namespace Control
           bind<DesiredZ>(this);
           bind<DesiredVerticalRate>(this);
           bind<DesiredSpeed>(this);
+          bind<DesiredControl>(this);
           bind<IdleManeuver>(this);
           bind<ControlLoops>(this);
           bind<VehicleMedium>(this);
@@ -711,6 +709,92 @@ namespace Control
         }
 
         void
+        consume(const IMC::DesiredControl* d_acc)
+        {
+          if (getSystemId() != d_acc->getSource())
+          {
+            debug("Ignoring DesiredAcc from remote system '%s' and entity '%s'",
+                  resolveSystemId(d_acc->getSource()),
+                  resolveEntity(d_acc->getSourceEntity()).c_str());
+            return;
+          }
+
+          if (m_external)
+          {
+            trace("ArduPilot is in Manual mode, ignoring acceleration setpoint.");
+            return;
+          }
+
+          if (!((m_cloops & IMC::CL_FORCE)))
+          {
+            trace("Force (acc) control is NOT active");
+            return;
+          }
+
+          if (m_vehicle_type == VEHICLE_COPTER &&
+              m_mode != CP_MODE_GUIDED)
+          {
+            // Copters must first be set to guided as of AC 3.2
+            uint8_t buf[512];
+            mavlink_message_t* msg = new mavlink_message_t;
+
+            mavlink_msg_set_mode_pack(255, 0, msg,
+                                      m_sysid,
+                                      1,
+                                      CP_MODE_GUIDED);
+
+            uint16_t n = mavlink_msg_to_send_buffer(buf, msg);
+            sendData(buf, n);
+            debug("Guided MODE on ardupilot is set");
+          }
+
+          // Pack and send to arducopter
+          // only if ardu_tracker is disabled.
+          if (m_vehicle_type == VEHICLE_COPTER
+              && !m_args.ardu_tracker)
+          {
+            uint32_t mask = 0x07FF; // Start, ignore all. (1s 12 first bits)
+            mask &= ~(1 << 9); // Clear bit 10.
+            float x=0, y=0, z=0;
+
+            if (d_acc->flags & DesiredControl::FL_X)
+            {
+              x = d_acc->x;
+              mask &= ~ ( 1 << (0 + 6));
+            }
+            if (d_acc->flags & DesiredControl::FL_Y)
+            {
+              y = d_acc->y;
+              mask &= ~ (1 << (1 + 6));
+            }
+            if (d_acc->flags & DesiredControl::FL_Z)
+            {
+              z = d_acc->z;
+              mask &= ~ (1 << (2 + 6));
+            }
+
+            mavlink_message_t msg;
+            uint8_t buf[512];
+
+            mavlink_msg_set_position_target_local_ned_pack(255, 0, &msg,
+                                                      Clock::getMsec(),
+                                                      m_sysid, //@param target_system System ID
+                                                      0, //@param target_component Component ID
+                                                      MAV_FRAME_LOCAL_NED,
+                                                      mask,
+                                                      0,0,0,
+                                                      0,0,0,
+                                                      x,y,z,
+                                                      0, 0);
+
+            int n = mavlink_msg_to_send_buffer(buf, &msg);
+            sendData(buf, n);
+
+            spew("Sent accel data to apm.");
+          }
+        }
+
+        void
         consume(const IMC::DesiredZ* d_z)
         {
           if (!(m_cloops & IMC::CL_ALTITUDE))
@@ -909,8 +993,8 @@ namespace Control
 
           m_changing_wp = true;
 
-          m_pcs.start_lat = Angles::radians(m_lat);
-          m_pcs.start_lon = Angles::radians(m_lon);
+          m_pcs.start_lat = m_lat;
+          m_pcs.start_lon = m_lon;
           m_pcs.start_z = getHeight();
           m_pcs.start_z_units = IMC::Z_HEIGHT;
 
@@ -942,8 +1026,8 @@ namespace Control
           // Convert altitude to geoid height (MSL).
           sendCommandPacket(MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, alt - m_hae_offset);
 
-          m_pcs.start_lat = Angles::radians(m_lat);
-          m_pcs.start_lon = Angles::radians(m_lon);
+          m_pcs.start_lat = m_lat;
+          m_pcs.start_lon = m_lon;
           m_pcs.start_z = getHeight();
           m_pcs.start_z_units = IMC::Z_HEIGHT;
 
@@ -1073,8 +1157,8 @@ namespace Control
           n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
 
-          m_pcs.start_lat = Angles::radians(m_lat);
-          m_pcs.start_lon = Angles::radians(m_lon);
+          m_pcs.start_lat = m_lat;
+          m_pcs.start_lon = m_lon;
           m_pcs.start_z = getHeight();
           m_pcs.start_z_units = IMC::Z_HEIGHT;
 
@@ -1586,46 +1670,35 @@ namespace Control
           mavlink_global_position_int_t gp;
           mavlink_msg_global_position_int_decode(msg, &gp);
 
-          double lat = Angles::radians((double)gp.lat * 1e-07);
-          double lon = Angles::radians((double)gp.lon * 1e-07);
+          // We need to wait until we know the vehicle type to handle this
+          if (m_vehicle_type == VEHICLE_UNKNOWN)
+            return;
 
-          m_lat = (double)gp.lat * 1e-07;
-          m_lon = (double)gp.lon * 1e-07;
+          m_lat = Angles::radians((double)gp.lat * 1e-07);
+          m_lon = Angles::radians((double)gp.lon * 1e-07);
+          m_hae_msl = (double) gp.alt * 1e-3;   //MSL
 
-          double d = WGS84::distance(m_ref_lat, m_ref_lon, m_ref_hae,
-                                     lat, lon, getHeight());
-
-          if (d > 1000.0)
+          if (m_args.convert_msl)
           {
-            if (m_args.convert_msl)
+            if (m_ground || m_reboot)
             {
               Coordinates::WMM wmm(m_ctx.dir_cfg);
-              m_hae_offset = wmm.height(lat, lon);
+              m_hae_offset = wmm.height(m_lat, m_lon);
+              m_reboot = false;
             }
-            else
-            {
-              m_hae_offset = 0;
-            }
-
-            m_estate.lat = lat;
-            m_estate.lon = lon;
-            m_estate.height = getHeight();
-
-            m_estate.x = 0;
-            m_estate.y = 0;
-            m_estate.z = 0;
-
-            m_ref_lat = lat;
-            m_ref_lon = lon;
-            m_ref_hae = getHeight();
-
           }
           else
           {
-            WGS84::displacement(m_ref_lat, m_ref_lon, m_ref_hae,
-                                lat, lon, getHeight(),
-                                &m_estate.x, &m_estate.y, &m_estate.z);
+            m_hae_offset = 0;
           }
+
+          m_estate.lat = m_lat;
+          m_estate.lon = m_lon;
+          m_estate.height = getHeight();
+
+          m_estate.x = 0;
+          m_estate.y = 0;
+          m_estate.z = 0;
 
           m_estate.vx = 1e-02 * gp.vx;
           m_estate.vy = 1e-02 * gp.vy;
@@ -1637,10 +1710,8 @@ namespace Control
                                       m_estate.vx, m_estate.vy, m_estate.vz,
                                       &m_estate.u, &m_estate.v, &m_estate.w);
 
+          m_estate.alt = (double) gp.relative_alt * 1e-3;   //AGL (relative to home altitude)
           m_estate.depth = -1;
-          m_estate.alt = -1;
-
-
         }
 
         float
@@ -2103,7 +2174,6 @@ namespace Control
           ias.value = (fp64_t)vfr_hud.airspeed;
           gs.value = (fp64_t)vfr_hud.groundspeed;
           m_gnd_speed = (int)vfr_hud.groundspeed;
-          m_hae_msl = vfr_hud.alt;
 
           dispatch(ias);
           dispatch(gs);

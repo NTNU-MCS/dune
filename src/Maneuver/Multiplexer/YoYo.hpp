@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2015 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -50,6 +50,8 @@ namespace Maneuver
       double u_course;
       //! Max cross. track error.
       double u_ctrack;
+      //! Minimum altitude.
+      float min_alt;
     };
 
     //! Yoyo maneuver
@@ -123,8 +125,8 @@ namespace Maneuver
         // initialize yoyo motion controller
         Memory::clear(m_yoyo);
 
-        m_yoyo = new YoYoMotion(m_task, maneuver->pitch, zref,
-                                maneuver->amplitude, m_args->variation);
+        m_yoyo = new YoYoMotion(m_task, maneuver->pitch, zref, maneuver->amplitude,
+                                m_args->variation, m_args->min_alt);
       }
 
       //! On PathControlState message
