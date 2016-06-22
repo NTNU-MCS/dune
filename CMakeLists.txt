@@ -404,11 +404,19 @@ if(TESTS)
     ADD_TEST(${executable} ${executable})
   endmacro(dune_test source)
 
+  # DUNE tests
   file(GLOB_RECURSE DUNE_TESTS_SOURCES
     "${PROJECT_SOURCE_DIR}/programs/tests/*.cpp")
   foreach(test ${DUNE_TESTS_SOURCES})
     dune_test(${test})
   endforeach(test ${DUNE_TESTS_SOURCES})
+  
+  # User tests
+  file(GLOB_RECURSE DUNE_USER_TESTS_SOURCES
+    "${PROJECT_SOURCE_DIR}/user/programs/tests/*.cpp")
+  foreach(test ${DUNE_USER_TESTS_SOURCES})
+    dune_test(${test})
+  endforeach(test ${DUNE_USER_TESTS_SOURCES})
 endif(TESTS)
 
 ##########################################################################
