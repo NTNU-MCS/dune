@@ -66,8 +66,13 @@ namespace DUNE
       .units(Units::Meter)
       .description("Timeout for ignoring invalid altitude");
 
-      m_ctx.config.get("General", "Absolute Maximum Depth", "50.0", m_max_depth);
+      param("Altitude Reference Margin", m_alt_margin)
+      .defaultValue("0.2f")
+      .units(Units::Meter)
+      .description("Altitude reference marging to add above minimum altitude.");
 
+      m_ctx.config.get("General", "Absolute Maximum Depth", "50.0", m_max_depth);
+      m_ctx.config.get("General", "Absolute Minimum Altitude", "1.2", m_min_alt);
       // Initialize entity state.
       setEntityState(IMC::EntityState::ESTA_NORMAL, Status::CODE_IDLE);
 
@@ -171,6 +176,10 @@ namespace DUNE
         {
           m_vertical_ref = limit;
           war(DTR("limiting depth to %.1f"), limit);
+          IMC::DesiredZ dz;
+          dz.z_units = msg->z_units;
+          dz.value = limit;
+          dispatch(dz);
         }
       }
       else if (msg->z_units == IMC::Z_ALTITUDE)
@@ -178,6 +187,18 @@ namespace DUNE
         m_vertical_mode = VERTICAL_MODE_ALTITUDE;
         // Avoid possible rough transition when changing from depth to altitude
         m_bottom_follow_depth = m_estate.depth;
+
+        float limit = m_min_alt + m_alt_margin;
+
+        if (m_vertical_ref < limit)
+        {
+          m_vertical_ref = limit;
+          war(DTR("limiting altitude to %.1f"), limit);
+          IMC::DesiredZ dz;
+          dz.z_units = msg->z_units;
+          dz.value = limit;
+          dispatch(dz);
+        }
 
         // reset altitude timer
         m_timer_alt.setTop(m_alt_timeout);

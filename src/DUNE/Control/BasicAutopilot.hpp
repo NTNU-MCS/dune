@@ -285,8 +285,12 @@ namespace DUNE
       bool m_hrate_bypass;
       //! Maximum admissible depth that the vehicle may sustain
       float m_max_depth;
+      //! Minimum admissible altitude that the vehicle may sustain
+      float m_min_alt;
       //! Timeout for ignoring invalid altitude
       float m_alt_timeout;
+      //! Margin for altitude reference.
+      float m_alt_margin;
     };
   }
 }
