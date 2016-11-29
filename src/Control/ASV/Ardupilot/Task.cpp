@@ -94,32 +94,22 @@ namespace Control
         Address TCP_addr;
         //! Telemetry Rate
         uint8_t trate;
-        //! LoiterHere (default) radius
-        float lradius;
-        //! Loitering tolerance
-        int ltolerance;
-        //! Has Power Module
-        bool pwrm;
         //! WP seconds before reach
         int secs;
         //! WP Rover: Minimum wp switch radius
         float ro_wp_radius;
-        //! RC setup
-        //RadioChannel rc_steer;
-        //RadioChannel rc_throttle;
-        //RadioChannel rc_learn;
         //! HITL
         bool hitl;
         //! Convert MSL to WGS84 height
         bool convert_msl;
-        //! Enter loiter mode when in idle
-        bool loiter_idle;
         //! Dispatch ExternalNavData rather than EstimatedState
         bool use_external_nav;
         //! Home latitude
         double latitude;
         //! Home longitude
         double longitude;
+        //! Default speed setpoint
+        double speed_default;
 
       };
 
@@ -140,6 +130,10 @@ namespace Control
         IMC::Voltage m_volt;
         IMC::Current m_curr;
         IMC::FuelLevel m_fuel;
+        //! Pressure message
+        IMC::Pressure m_pressure;
+        //! Temperature message
+        IMC::Temperature m_temp;
         //! GPS Fix message
         IMC::GpsFix m_fix;
         //! Wind message
@@ -185,8 +179,8 @@ namespace Control
         float m_dspeed;
         //! Type of system to be controlled
         APM_Vehicle m_vehicle_type;
-        //! Check if is in service
-        bool m_service;
+        //! Check vehicle state
+        int m_vehiclestate;
         //! Time since last waypoint was sent
         float m_last_wp;
         //! Mission items queue
@@ -215,7 +209,7 @@ namespace Control
           m_has_setup_rate(false),
           m_dspeed(20),
           m_vehicle_type(VEHICLE_UNKNOWN),
-          m_service(false),
+          m_vehiclestate(IMC::VehicleState::VS_BOOT),
           m_last_wp(0)
         {
           param("Communications Timeout", m_args.comm_timeout)
@@ -244,101 +238,10 @@ namespace Control
           .units(Units::Hertz)
           .description("Telemetry output rate from Ardupilot");
 
-          param("Default loiter radius", m_args.lradius)
-          .defaultValue("-150.0")
-          .units(Units::Meter)
-          .description("Loiter radius used in LoiterHere (idle)");
-
-          param("Loitering tolerance", m_args.ltolerance)
-          .defaultValue("10")
-          .units(Units::Meter)
-          .description("Distance to consider loitering (radius + tolerance)");
-
-          param("Power module", m_args.pwrm)
-          .defaultValue("true")
-          .description("There is a power module installed");
-
-          param("Seconds before waypoint", m_args.secs)
-          .defaultValue("2")
-          .units(Units::Second)
-          .description("Seconds before actually reaching waypoint that it is considered as reached");
-
           param("Rover - Minimum WP switch radius", m_args.ro_wp_radius)
           .defaultValue("5.0")
           .units(Units::Meter)
           .description("Used for waypoint switching for rovers. Rovers uses the seconds before reaching wp, but will also switch if this distance is met.");
-
-          /*param("RC Steering PWM MIN", m_args.rc_steer.pwm_min)
-          .defaultValue("1000")
-          .units(Units::Microsecond)
-          .description("Min PWM value for Steering channel");
-
-          param("RC Steering PWM MAX", m_args.rc_steer.pwm_max)
-          .defaultValue("2000")
-          .units(Units::Microsecond)
-          .description("Max PWM value for Steering channel");
-
-          param("RC Steering MAX", m_args.rc_steer.val_max)
-          .defaultValue("30.0")
-          .units(Units::Degree)
-          .description("Max Steering");
-
-          param("RC Steering MIN", m_args.rc_steer.val_min)
-          .defaultValue("-30.0")
-          .units(Units::Degree)
-          .description("Min Steering");
-
-          param("RC Steering REV", m_args.rc_steer.reverse)
-          .defaultValue("False")
-          .description("Reverse Steering Channel");
-
-          param("RC Throttle PWM MIN", m_args.rc_throttle.pwm_min)
-          .defaultValue("1000")
-          .units(Units::Microsecond)
-          .description("Min PWM value for Throttle channel");
-
-          param("RC Throttle PWM MAX", m_args.rc_throttle.pwm_max)
-          .defaultValue("2000")
-          .units(Units::Microsecond)
-          .description("Max PWM value for Throttle channel");
-
-          param("RC Throttle MAX", m_args.rc_throttle.val_max)
-          .defaultValue("2.0")
-          .units(Units::MeterPerSecond)
-          .description("Max Throttle");
-
-          param("RC Throttle MIN", m_args.rc_throttle.val_min)
-          .defaultValue("0.0")
-          .units(Units::MeterPerSecond)
-          .description("Min Throttle");
-
-          param("RC Throttle REV", m_args.rc_throttle.reverse)
-          .defaultValue("False")
-          .description("Reverse Throttle Channel");
-
-          param("RC Learning PWM MIN", m_args.rc_learn.pwm_min)
-          .defaultValue("1000")
-          .units(Units::Microsecond)
-          .description("Min PWM value for Learning channel");
-
-          param("RC Learning PWM MAX", m_args.rc_learn.pwm_max)
-          .defaultValue("2000")
-          .units(Units::Microsecond)
-          .description("Max PWM value for Learning channel");
-
-          param("RC Learning MIN", m_args.rc_learn.val_min)
-          .defaultValue("10.0")
-          .units(Units::MeterPerSecond)
-          .description("Min Learning");
-
-          param("RC Learning MAX", m_args.rc_learn.val_max)
-          .defaultValue("30.0")
-          .units(Units::MeterPerSecond)
-          .description("Max Air Speed");
-
-          param("RC Learning REV", m_args.rc_learn.reverse)
-          .defaultValue("False")
-          .description("Reverse Learning Channel");*/
 
           param("HITL", m_args.hitl)
           .defaultValue("false")
@@ -347,10 +250,6 @@ namespace Control
           param("Convert MSL to WGS84 height", m_args.convert_msl)
           .defaultValue("false")
           .description("Convert altitude extracted from the Ardupilot to WGS84 height");
-
-          param("Loiter in Idle", m_args.loiter_idle)
-          .defaultValue("true")
-          .description("Loiter when in idle.");
 
           param("Use External Nav Data", m_args.use_external_nav)
           .defaultValue("false")
@@ -362,12 +261,16 @@ namespace Control
           param("Home longitude", m_args.longitude)
           .description("Longitude defined as home.");
 
-          // Setup packet handlers
-          // IMPORTANT: set up function to handle each type of MAVLINK packet here
+          param("Default speed setpoint", m_args.speed_default)
+          .defaultValue("1.5")
+          .description("Default speed setpoint to use");
+
+          //! Setup packet handlers
+          //! IMPORTANT: set up function to handle each type of MAVLINK packet here
           m_mlh[MAVLINK_MSG_ID_ATTITUDE] = &Task::handleAttitudePacket;
           m_mlh[MAVLINK_MSG_ID_GLOBAL_POSITION_INT] = &Task::handlePositionPacket;
           m_mlh[MAVLINK_MSG_ID_HWSTATUS] = &Task::handleHWStatusPacket;
-          //m_mlh[MAVLINK_MSG_ID_SCALED_PRESSURE] = &Task::handleScaledPressurePacket;
+          m_mlh[MAVLINK_MSG_ID_SCALED_PRESSURE] = &Task::handleScaledPressurePacket;
           m_mlh[MAVLINK_MSG_ID_GPS_RAW_INT] = &Task::handleRawGPSPacket;
           m_mlh[MAVLINK_MSG_ID_WIND] = &Task::handleWindPacket;
           m_mlh[MAVLINK_MSG_ID_COMMAND_ACK] = &Task::handleCmdAckPacket;
@@ -383,15 +286,11 @@ namespace Control
           m_mlh[MAVLINK_MSG_ID_MISSION_REQUEST] = &Task::handleMissionRequestPacket;
           m_mlh[MAVLINK_MSG_ID_RAW_IMU] = &Task::handleImuRaw;
 
-          // Setup processing of IMC messages
+          //! Setup processing of IMC messages
           bind<DesiredPath>(this);
-          bind<DesiredSpeed>(this);
-          //bind<IdleManeuver>(this);
           bind<ControlLoops>(this);
           bind<VehicleState>(this);
           bind<SimulatedState>(this);
-          //bind<DevCalibrationControl>(this);
-          bind<IMC::VehicleCommand>(this);
           bind<AutopilotMode>(this);
 
           //! Misc. initialization
@@ -527,6 +426,33 @@ namespace Control
           n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
           spew("RC Stream disabled");
+
+          //! Setting speed setpoint parameter
+          mavlink_msg_param_set_pack(255, 0, &msg,
+                                     m_sysid, //! target_system System ID
+                                     0, //! target_component Component ID
+                                     "CRUISE_SPEED", //! Parameter name
+                                     m_args.speed_default, //! Parameter value
+                                     MAV_PARAM_TYPE_REAL32); //! Parameter type
+
+          n = mavlink_msg_to_send_buffer(buf, &msg);
+          sendData(buf, n);
+          spew("Default cruise speed set to: %f", m_args.speed_default);
+        }
+
+        void
+        sendCommandPacket(uint16_t cmd, float arg1=0, float arg2=0, float arg3=0, float arg4=0, float arg5=0, float arg6=0, float arg7=0)
+        {
+          uint8_t buf[512];
+
+          mavlink_message_t msg;
+
+          trace("%0.2f %0.2f %0.2f %0.2f %0.2f %0.2f %0.2f", arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+
+          mavlink_msg_command_long_pack(255, 0, &msg, m_sysid, 0, cmd, 0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+
+          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
+          sendData(buf, n);
         }
 
         //! Prints to terminal and log when control loops are activated and deactivated
@@ -599,28 +525,27 @@ namespace Control
           info(prev, m_cloops, IMC::CL_PATH, "path control");
         }
 
-        void consume(const IMC::VehicleCommand *msg)
+        void consume(const IMC::VehicleState *msg)
         {
-          if(!m_external)
-            if(msg->type == IMC::VehicleCommand::VC_REQUEST)
-              if(msg->command == IMC::VehicleCommand::VC_EXEC_MANEUVER)
-              {
-                sendCommandPacket(MAV_CMD_NAV_GUIDED_ENABLE, 1);
-                trace("Sent mode change request: GUIDED");
-              }
-        }
+          uint8_t buf[512];
+          mavlink_message_t mvmsg;
 
-        void
-        consume(const IMC::DesiredSpeed* d_speed)
-        {
-          if (!(m_cloops & IMC::CL_SPEED))
+          if(msg->op_mode != IMC::VehicleState::VS_MANEUVER && m_vehiclestate == IMC::VehicleState::VS_MANEUVER)
           {
-            inf(DTR("speed control is NOT active"));
-            return;
-          }
+            //! Setting speed setpoint parameter
+            m_dspeed = 0.0;
+            mavlink_msg_param_set_pack(255, 0, &mvmsg,
+                                       m_sysid, //! target_system System ID
+                                       0, //! target_component Component ID
+                                       "CRUISE_SPEED", //! Parameter name
+                                       m_dspeed, //! Parameter value
+                                       MAV_PARAM_TYPE_REAL32); //! Parameter type
 
-          //! Saving value
-          m_dspeed = d_speed->value;
+            uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
+            sendData(buf, n);
+            debug("Mission aborted. Set speed to %f.", m_dspeed);
+          }
+          m_vehiclestate = msg->op_mode;
         }
 
         //! Converts value in range min_value:max_value to a value_pwm in range min_pwm:max_pwm
@@ -673,21 +598,24 @@ namespace Control
           sendData(buf, n);
           debug("Guided MODE on ardupilot is set");
 
-          //! Setting loiter radius parameter
+          //! Setting speed setpoint parameter
           mavlink_msg_param_set_pack(255, 0, &msg,
                                      m_sysid, //! target_system System ID
                                      0, //! target_component Component ID
-                                     "WP_LOITER_RAD", //! Parameter name
-                                     path->flags & DesiredPath::FL_CCLOCKW ? (-1 * path->lradius) : (path->lradius), //! Parameter value
-                                     MAV_PARAM_TYPE_INT16); //! Parameter type
+                                     "CRUISE_SPEED", //! Parameter name
+                                     path->speed, //! Parameter value
+                                     MAV_PARAM_TYPE_REAL32); //! Parameter type
 
           n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
 
-          m_desired_radius = (uint16_t) path->lradius;
+          //sendCommandPacket(MAV_CMD_DO_CHANGE_SPEED, 1, path->speed, 0, 0);
+          m_dspeed = path->speed;
+          debug("Speed setpoint set to: %f", m_dspeed);
 
           //! Set destination
-            mavlink_msg_mission_item_pack(255, 0, &msg,
+          //sendCommandPacket(MAV_CMD_NAV_WAYPOINT, 0, m_args.ro_wp_radius, 0, 0, (float)Angles::degrees(path->end_lat), (float)Angles::degrees(path->end_lon), 0);
+          mavlink_msg_mission_item_pack(255, 0, &msg,
                                           m_sysid, //! target_system System ID
                                           0, //! target_component Component ID
                                           1, //! seq Sequence
@@ -728,61 +656,6 @@ namespace Control
           m_last_wp = Clock::get();
 
           debug("Waypoint packet sent to Ardupilot");
-        }
-
-        void
-        loiterHere(void)
-        {
-
-          if ((getEntityState() != IMC::EntityState::ESTA_NORMAL) || m_external)
-            return;
-
-          mavlink_message_t msg;
-          uint8_t buf[512];
-
-          mavlink_msg_param_set_pack(255, 0, &msg,
-                                     m_sysid, //! target_system System ID
-                                     0, //! target_component Component ID
-                                     "WP_LOITER_RAD", //! Parameter name
-                                     m_args.lradius, //! Parameter value
-                                     MAV_PARAM_TYPE_INT16); //! Parameter type
-
-          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
-          sendData(buf, n);
-
-          sendCommandPacket(MAV_CMD_NAV_LOITER_UNLIM);
-          inf("Sent loiter with radius %f", m_args.lradius);
-
-          debug("Sent LOITER packet to Ardupilot");
-
-          m_pcs.start_lat = m_fix.lat;
-          m_pcs.start_lon = m_fix.lon;
-          m_pcs.start_z = m_fix.height;
-
-          m_pcs.end_lat = m_fix.lat;
-          m_pcs.end_lon = m_fix.lon;
-          m_pcs.end_z = m_fix.height;
-
-          m_pcs.flags = PathControlState::FL_LOITERING | PathControlState::FL_NEAR | (m_args.lradius < 0 ? PathControlState::FL_CCLOCKW : 0);
-          m_pcs.lradius = m_args.lradius * (m_args.lradius < 0 ? -1 : 1);
-
-          dispatch(m_pcs);
-        }
-
-        void
-        consume(const IMC::IdleManeuver* idle)
-        {
-          (void)idle;
-          m_dpath.clear();
-
-          if(m_args.loiter_idle)
-            loiterHere();
-        }
-
-        void
-        consume(const IMC::VehicleState* msg)
-        {
-          m_service = (msg->op_mode == IMC::VehicleState::VS_SERVICE);
         }
 
         //! Used for HITL simulations
@@ -848,21 +721,6 @@ namespace Control
 
           trace("IMC::AutoPilotMode->mode: %s", msg->mode.c_str());
           (void)msg;
-        }
-
-        void
-        sendCommandPacket(uint16_t cmd, float arg1=0, float arg2=0, float arg3=0, float arg4=0, float arg5=0, float arg6=0, float arg7=0)
-        {
-          uint8_t buf[512];
-
-          mavlink_message_t msg;
-
-          trace("%0.2f %0.2f %0.2f %0.2f %0.2f %0.2f %0.2f", arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-
-          mavlink_msg_command_long_pack(255, 0, &msg, m_sysid, 0, cmd, 0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-
-          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
-          sendData(buf, n);
         }
 
         void
@@ -935,7 +793,7 @@ namespace Control
         {
           if (m_TCP_sock)
           {
-            trace("Sending something");
+            spew("Sending something");
             return m_TCP_sock->write((char*)bfr, size);
           }
           return 0;
@@ -1025,25 +883,25 @@ namespace Control
                 switch ((int)m_msg.msgid)
                 {
                   default:
-                    debug("UNDEF: %u", m_msg.msgid);
+                    spew("UNDEF: %u", m_msg.msgid);
                     break;
                   case MAVLINK_MSG_ID_HEARTBEAT:
-                    trace("HEARTBEAT");
+                    spew("HEARTBEAT");
                     break;
                   case MAVLINK_MSG_ID_SYS_STATUS:
-                    trace("SYS_STATUS");
+                    spew("SYS_STATUS");
                     break;
                   case MAVLINK_MSG_ID_SYSTEM_TIME:
-                    trace("SYSTEM_TIME");
+                    spew("SYSTEM_TIME");
                     break;
                   case 22:
-                    trace("PARAM_VALUE");
+                    spew("PARAM_VALUE");
                     break;
                   case MAVLINK_MSG_ID_GPS_RAW_INT:
                     spew("GPS_RAW");
                     break;
                   case 27:
-                    trace("IMU_RAW");
+                    spew("IMU_RAW");
                     break;
                   case MAVLINK_MSG_ID_SCALED_PRESSURE:
                     spew("SCALED_PRESSURE");
@@ -1055,28 +913,28 @@ namespace Control
                     spew("GLOBAL_POSITION_INT");
                     break;
                   case 34:
-                    trace("RC_CHANNELS_SCALED");
+                    spew("RC_CHANNELS_SCALED");
                     break;
                   case 35:
-                    trace("RC_CHANNELS_RAW");
+                    spew("RC_CHANNELS_RAW");
                     break;
                   case MAVLINK_MSG_ID_MISSION_ITEM:
-                    trace("MISSION_ITEM");
+                    spew("MISSION_ITEM");
                     break;
                   case MAVLINK_MSG_ID_MISSION_REQUEST:
-                    trace("MISSION_REQUEST");
+                    spew("MISSION_REQUEST");
                     break;
                   case MAVLINK_MSG_ID_MISSION_CURRENT:
-                    trace("MISSION_CURRENT");
+                    spew("MISSION_CURRENT");
                     break;
                   case MAVLINK_MSG_ID_MISSION_ACK:
                     spew("MISSION_ACK");
                     break;
                   case MAVLINK_MSG_ID_NAV_CONTROLLER_OUTPUT:
-                    trace("NAV_CONTROLLER_OUTPUT");
+                    spew("NAV_CONTROLLER_OUTPUT");
                     break;
                   case MAVLINK_MSG_ID_VFR_HUD:
-                    trace("VFR_HUD");
+                    spew("VFR_HUD");
                     break;
                   case MAVLINK_MSG_ID_COMMAND_ACK:
                     spew("CMD_ACK");
@@ -1091,19 +949,19 @@ namespace Control
                     spew("BATTERY_STAT");
                     break;
                   case 150:
-                    trace("SENSOR_OFFSETS");
+                    spew("SENSOR_OFFSETS");
                     break;
                   case 152:
-                    trace("MEMINFO");
+                    spew("MEMINFO");
                     break;
                   case 162:
-                    trace("FENCE_STATUS");
+                    spew("FENCE_STATUS");
                     break;
                   case 163:
-                    trace("AHRS");
+                    spew("AHRS");
                     break;
                   case 164:
-                    trace("SIM_STATE");
+                    spew("SIM_STATE");
                     break;
                   case MAVLINK_MSG_ID_HWSTATUS:
                     spew("HW_STATUS");
@@ -1115,7 +973,7 @@ namespace Control
                     spew("AHRS2");
                     break;
                   case MAVLINK_MSG_ID_STATUSTEXT:
-                    trace("STATUSTEXT");
+                    spew("STATUSTEXT");
                     break;
                 }
 
@@ -1262,12 +1120,6 @@ namespace Control
         void
         handleHWStatusPacket(const mavlink_message_t* msg)
         {
-          if (m_args.pwrm)
-          {
-            (void) msg;
-            return;
-          }
-
           mavlink_hwstatus_t hw_status;
 
           mavlink_msg_hwstatus_decode(msg, &hw_status);
@@ -1280,11 +1132,6 @@ namespace Control
         void
         handleSystemStatusPacket(const mavlink_message_t* msg)
         {
-          if (!m_args.pwrm)
-          {
-            (void) msg;
-            return;
-          }
           mavlink_sys_status_t sys_status;
 
           mavlink_msg_sys_status_decode(msg, &sys_status);
@@ -1298,7 +1145,7 @@ namespace Control
           dispatch(m_fuel);
         }
 
-        /*void
+        void
         handleScaledPressurePacket(const mavlink_message_t* msg)
         {
           mavlink_scaled_pressure_t sc_press;
@@ -1310,7 +1157,7 @@ namespace Control
 
           dispatch(m_pressure);
           dispatch(m_temp);
-        }*/
+        }
 
         void
         handleRawGPSPacket(const mavlink_message_t* msg)
@@ -1588,21 +1435,6 @@ namespace Control
             is_valid_mode = (m_mode == RO_MODE_GUIDED || (m_mode == RO_MODE_AUTO                     )) ? true : false;
           else
             is_valid_mode = (m_mode == 15             || (m_mode == 10           && m_current_wp == 3)) ? true : false;
-
-          // Check Loiter tolerance
-          if (m_vehicle_type == VEHICLE_ROVER)
-          {
-            if ((vehicle_distance <= m_args.ltolerance)
-               && is_valid_mode)
-            {
-              m_pcs.flags |= PathControlState::FL_LOITERING;
-            }
-          }
-          else
-          {
-            err(DTR("Controlling an unknown vehicle type."));
-            return;
-          }
 
           float since_last_wp = Clock::get() - m_last_wp;
 
