@@ -116,6 +116,11 @@ namespace Control
         bool loiter_idle;
         //! Dispatch ExternalNavData rather than EstimatedState
         bool use_external_nav;
+        //! Home latitude
+        double latitude;
+        //! Home longitude
+        double longitude;
+
       };
 
       struct Task: public DUNE::Tasks::Task
@@ -137,6 +142,8 @@ namespace Control
         IMC::FuelLevel m_fuel;
         //! GPS Fix message
         IMC::GpsFix m_fix;
+        //! Wind message
+        IMC::EstimatedStreamVelocity m_stream;
         //! Path Control State
         IMC::PathControlState m_pcs;
         //! DesiredPath message
@@ -349,6 +356,12 @@ namespace Control
           .defaultValue("false")
           .description("Dispatch ExternalNavData instead of EstimatedState");
 
+          param("Home latitude", m_args.latitude)
+          .description("Latitude defined as home.");
+
+          param("Home longitude", m_args.longitude)
+          .description("Longitude defined as home.");
+
           // Setup packet handlers
           // IMPORTANT: set up function to handle each type of MAVLINK packet here
           m_mlh[MAVLINK_MSG_ID_ATTITUDE] = &Task::handleAttitudePacket;
@@ -356,7 +369,7 @@ namespace Control
           m_mlh[MAVLINK_MSG_ID_HWSTATUS] = &Task::handleHWStatusPacket;
           //m_mlh[MAVLINK_MSG_ID_SCALED_PRESSURE] = &Task::handleScaledPressurePacket;
           m_mlh[MAVLINK_MSG_ID_GPS_RAW_INT] = &Task::handleRawGPSPacket;
-          //m_mlh[MAVLINK_MSG_ID_WIND] = &Task::handleWindPacket;
+          m_mlh[MAVLINK_MSG_ID_WIND] = &Task::handleWindPacket;
           m_mlh[MAVLINK_MSG_ID_COMMAND_ACK] = &Task::handleCmdAckPacket;
           m_mlh[MAVLINK_MSG_ID_MISSION_ACK] = &Task::handleMissionAckPacket;
           m_mlh[MAVLINK_MSG_ID_MISSION_CURRENT] = &Task::handleMissionCurrentPacket;
@@ -376,8 +389,9 @@ namespace Control
           //bind<IdleManeuver>(this);
           bind<ControlLoops>(this);
           bind<VehicleState>(this);
-          //bind<SimulatedState>(this);
+          bind<SimulatedState>(this);
           //bind<DevCalibrationControl>(this);
+          bind<IMC::VehicleCommand>(this);
           bind<AutopilotMode>(this);
 
           //! Misc. initialization
@@ -400,7 +414,8 @@ namespace Control
         void
         onUpdateParameters(void)
         {
-          ;
+          sendCommandPacket(MAV_CMD_DO_SET_HOME, 0, 0, 0, 0, m_args.latitude, m_args.longitude, 0.0);
+          trace("Home changed to: Lat: %f, Long: %f", m_args.latitude, m_args.longitude);
         }
 
         void
@@ -584,6 +599,17 @@ namespace Control
           info(prev, m_cloops, IMC::CL_PATH, "path control");
         }
 
+        void consume(const IMC::VehicleCommand *msg)
+        {
+          if(!m_external)
+            if(msg->type == IMC::VehicleCommand::VC_REQUEST)
+              if(msg->command == IMC::VehicleCommand::VC_EXEC_MANEUVER)
+              {
+                sendCommandPacket(MAV_CMD_NAV_GUIDED_ENABLE, 1);
+                trace("Sent mode change request: GUIDED");
+              }
+        }
+
         void
         consume(const IMC::DesiredSpeed* d_speed)
         {
@@ -725,26 +751,17 @@ namespace Control
           sendData(buf, n);
 
           sendCommandPacket(MAV_CMD_NAV_LOITER_UNLIM);
+          inf("Sent loiter with radius %f", m_args.lradius);
 
           debug("Sent LOITER packet to Ardupilot");
 
           m_pcs.start_lat = m_fix.lat;
           m_pcs.start_lon = m_fix.lon;
-          //m_pcs.start_z = m_fix.height;
+          m_pcs.start_z = m_fix.height;
 
           m_pcs.end_lat = m_fix.lat;
           m_pcs.end_lon = m_fix.lon;
-          //m_pcs.end_z = m_fix.height;
-
-          /*if( m_vehicle_type == VEHICLE_COPTER )
-          {
-            // Calculate the prev. absolute position
-            double lat = m_estate.lat;
-            double lon = m_estate.lon;
-            WGS84::displace(m_estate.x, m_estate.y, &lat, &lon);
-            m_pcs.end_lat = lat;
-            m_pcs.end_lon = lon;
-          }*/
+          m_pcs.end_z = m_fix.height;
 
           m_pcs.flags = PathControlState::FL_LOITERING | PathControlState::FL_NEAR | (m_args.lradius < 0 ? PathControlState::FL_CCLOCKW : 0);
           m_pcs.lradius = m_args.lradius * (m_args.lradius < 0 ? -1 : 1);
@@ -829,6 +846,7 @@ namespace Control
           if (msg->mode.compare("DISARM") == 0)
             sendCommandPacket(MAV_CMD_COMPONENT_ARM_DISARM, 0);
 
+          trace("IMC::AutoPilotMode->mode: %s", msg->mode.c_str());
           (void)msg;
         }
 
@@ -1326,7 +1344,7 @@ namespace Control
           }
         }
 
-        /*void
+        void
         handleWindPacket(const mavlink_message_t* msg)
         {
           mavlink_wind_t wind;
@@ -1340,7 +1358,7 @@ namespace Control
           m_stream.z = wind.speed_z;
 
           dispatch(m_stream);
-        }*/
+        }
 
         void
         handleCmdAckPacket(const mavlink_message_t* msg)
@@ -1424,11 +1442,16 @@ namespace Control
             {
             default:
               err(DTR("Controlling an unknown vehicle type."));
+              printf("vehicle type is: %i (ROVER: %i, BOAT: %i)", mav_type, MAV_TYPE_GROUND_ROVER, MAV_TYPE_SURFACE_BOAT);
               return;
             case MAV_TYPE_SURFACE_BOAT:
               m_vehicle_type = VEHICLE_ROVER;
-              inf(DTR("Controlling a surface vehicle."));
+              inf(DTR("Controlling a surface boat."));
               break;
+            case MAV_TYPE_GROUND_ROVER:
+              m_vehicle_type = VEHICLE_ROVER;
+              inf(DTR("Controlling a ground rover."));
+              return;
             case MAV_TYPE_FIXED_WING:
             case MAV_TYPE_QUADROTOR:
             case MAV_TYPE_HEXAROTOR:
