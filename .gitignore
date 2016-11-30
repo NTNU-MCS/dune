@@ -8,3 +8,5 @@ private/
 *.mo
 CMakeLists.txt.user
 user/
+.vscode/
+build/
