@@ -9,3 +9,4 @@ private/
 CMakeLists.txt.user
 user/
 build/
+.vscode/

@@ -238,6 +238,11 @@ namespace Control
           .units(Units::Hertz)
           .description("Telemetry output rate from Ardupilot");
 
+          param("Seconds before waypoint", m_args.secs)
+          .defaultValue("2")
+          .units(Units::Second)
+          .description("Seconds before actually reaching Waypoint that it is considered as reached");
+
           param("Rover - Minimum WP switch radius", m_args.ro_wp_radius)
           .defaultValue("5.0")
           .units(Units::Meter)
@@ -530,20 +535,32 @@ namespace Control
           uint8_t buf[512];
           mavlink_message_t mvmsg;
 
-          if(msg->op_mode != IMC::VehicleState::VS_MANEUVER && m_vehiclestate == IMC::VehicleState::VS_MANEUVER)
+          if(msg->op_mode == IMC::VehicleState::VS_SERVICE 
+              && (m_vehiclestate == IMC::VehicleState::VS_BOOT
+              || m_vehiclestate == IMC::VehicleState::VS_ERROR))
           {
-            //! Setting speed setpoint parameter
-            m_dspeed = 0.0;
-            mavlink_msg_param_set_pack(255, 0, &mvmsg,
-                                       m_sysid, //! target_system System ID
-                                       0, //! target_component Component ID
-                                       "CRUISE_SPEED", //! Parameter name
-                                       m_dspeed, //! Parameter value
-                                       MAV_PARAM_TYPE_REAL32); //! Parameter type
+            //! Set HOLD mode
+            mavlink_msg_set_mode_pack(255, 0, &mvmsg,
+                                    m_sysid,
+                                    1,
+                                    RO_MODE_HOLD);
 
             uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
             sendData(buf, n);
-            debug("Mission aborted. Set speed to %f.", m_dspeed);
+            debug("Boot completed. Autopilot mode set to HOLD.");
+          }
+          else if(msg->op_mode != IMC::VehicleState::VS_MANEUVER 
+              && m_vehiclestate == IMC::VehicleState::VS_MANEUVER)
+          {
+            //! Set HOLD mode
+            mavlink_msg_set_mode_pack(255, 0, &mvmsg,
+                                    m_sysid,
+                                    1,
+                                    RO_MODE_HOLD);
+
+            uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
+            sendData(buf, n);
+            debug("Mission aborted. Autopilot mode set to HOLD.");
           }
           m_vehiclestate = msg->op_mode;
         }
@@ -609,12 +626,10 @@ namespace Control
           n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
 
-          //sendCommandPacket(MAV_CMD_DO_CHANGE_SPEED, 1, path->speed, 0, 0);
           m_dspeed = path->speed;
           debug("Speed setpoint set to: %f", m_dspeed);
 
           //! Set destination
-          //sendCommandPacket(MAV_CMD_NAV_WAYPOINT, 0, m_args.ro_wp_radius, 0, 0, (float)Angles::degrees(path->end_lat), (float)Angles::degrees(path->end_lon), 0);
           mavlink_msg_mission_item_pack(255, 0, &msg,
                                           m_sysid, //! target_system System ID
                                           0, //! target_component Component ID
@@ -638,14 +653,10 @@ namespace Control
 
           m_pcs.start_lat = m_lat;
           m_pcs.start_lon = m_lon;
-         // m_pcs.start_z = getHeight();
-          //m_pcs.start_z_units = IMC::Z_HEIGHT;
 
           m_pcs.end_lat = path->end_lat;
           m_pcs.end_lon = path->end_lon;
-          //m_pcs.end_z = alt;
-          //m_pcs.end_z_units = IMC::Z_HEIGHT;
-          //m_pcs.flags = PathControlState::FL_3DTRACK | PathControlState::FL_CCLOCKW;
+          
           m_pcs.flags = PathControlState::FL_NO_Z | PathControlState::FL_CCLOCKW;
           m_pcs.flags &= path->flags;
           m_pcs.lradius = path->lradius;
