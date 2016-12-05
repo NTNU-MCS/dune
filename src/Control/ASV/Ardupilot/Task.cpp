@@ -68,19 +68,6 @@ namespace Control
         RO_MODE_INITIALISING = 16
       };
 
-      //! Radio Channel structure.
-      /*struct RadioChannel
-      {
-        //! PWM range
-        int pwm_min;
-        int pwm_max;
-        //! Value range
-        float val_max;
-        float val_min;
-        //! Channel reverse
-        bool reverse;
-      };*/
-
       //! %Task arguments.
       struct Arguments
       {
@@ -639,16 +626,6 @@ namespace Control
           uint8_t buf[512];
           mavlink_message_t msg;
 
-          //! Set GUIDED mode
-          /*mavlink_msg_set_mode_pack(255, 0, &msg,
-                                    m_sysid,
-                                    1,
-                                    RO_MODE_GUIDED); //! DUNE mode on ardurover is 15
-
-          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
-          sendData(buf, n);
-          debug("Guided MODE on ardupilot is set");*/
-
           //! Setting speed setpoint parameter
           mavlink_msg_param_set_pack(255, 0, &msg,
                                      m_sysid, //! target_system System ID
@@ -660,13 +637,10 @@ namespace Control
           uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
 
-          //sendCommandPacket(MAV_CMD_DO_CHANGE_SPEED, (float)path->speed);
-
           m_dspeed = path->speed;
           debug("Speed setpoint set to: %f", m_dspeed);
 
           //! Set destination
-          //sendCommandPacket(MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, (float)Angles::degrees(path->end_lat), (float)Angles::degrees(path->end_lon), 0);
           mavlink_msg_mission_item_pack(255, 0, &msg,
                                           m_sysid, //! target_system System ID
                                           0, //! target_component Component ID
@@ -762,18 +736,6 @@ namespace Control
 
           uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
           sendData(buf, n);
-          
-
-          //! Setting speed setpoint parameter
-          /*mavlink_msg_param_set_pack(255, 0, &mvmsg,
-                                      m_sysid, //! target_system System ID
-                                      0, //! target_component Component ID
-                                      "CRUISE_SPEED", //! Parameter name
-                                      msg->value, //! Parameter value
-                                      MAV_PARAM_TYPE_REAL32); //! Parameter type
-
-          uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
-          sendData(buf, n);*/
 
           debug("Yaw setpoint: %f sent to Ardupilot", (float)Angles::degrees(msg->value));
         }
@@ -824,13 +786,12 @@ namespace Control
                                       m_sysid, //! target_system System ID
                                       0, //! target_component Component ID
                                       "CRUISE_SPEED", //! Parameter name
-                                      msg->value, //! Parameter value
+                                      (float)speed, //! Parameter value
                                       MAV_PARAM_TYPE_REAL32); //! Parameter type
 
           uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
           sendData(buf, n);
 
-          //sendCommandPacket(MAV_CMD_DO_CHANGE_SPEED, (float)speed);
           debug("Speed setpoint: %f sent to Ardupilot.", (float)speed);
         }
 
