@@ -47,6 +47,8 @@ namespace Simulators
       //bool remote_active;
       //! Use virtual system 
       bool virtual_enable;
+      //! Timeout 
+      double timeout;
     };
 
     struct Task: public Tasks::Periodic
@@ -58,15 +60,17 @@ namespace Simulators
       //! Source system id
       uint16_t m_source;
       //! Virtual system announce
-      DUNE::IMC::Announce m_announce;
+      IMC::Announce m_announce;
       //! Target estimated state 
       IMC::EstimatedState m_estate;
       //! Target simulated state 
       IMC::SimulatedState m_sstate;
+      //! Virtual heartbeat 
+      IMC::Heartbeat m_hb;
       //! the last Clock::get() when the target system's position was updated
       Counter<double> m_last_update;
       //! Remote State computed heading's timestamp, for evaluating the best heading to be used
-      Counter<double> m_heading_timestamp;
+      //Counter<double> m_heading_timestamp;
       //! this variable will hold the value of the heading computed when using the announce method instead of the remote state.
       double m_remote_heading;
       //! variable to hold the last known bearing
@@ -79,25 +83,36 @@ namespace Simulators
       double m_last_known_lon;
       //! is it the first time consume announce is being ran?
       //bool m_first_announce;
+      //! Has first estimated state
+      bool m_has_first_estimate;
+      //! Has an updated estimated state 
+      bool m_has_updated_estimate;
 
       Task(const std::string& name, Tasks::Context& ctx):
         Tasks::Periodic(name, ctx),
         m_remote_heading(0),
         m_last_known_bearing(0),
         m_last_known_lat(0),
-        m_last_known_lon(0)
+        m_last_known_lon(0),
+        m_has_first_estimate(false),
+        m_has_updated_estimate(false)
         //m_first_announce(true)
       {
         param("Target Name", m_args.target_name)
-        .description("Target Name");
+        .description("Target Name (system to be followed)");
 
-        param("Source Name", m_args.source_name)
+        param("Virtual Source Name", m_args.source_name)
         .defaultValue("lauv-virtual-1")
-        .description("System name used as source");
+        .description("Virtual System name used as source");
 
         param("Virtual System Enable", m_args.virtual_enable)
         .defaultValue("true")
         .description("Enable or disable virtual system");
+
+        param("Timeout", m_args.timeout)
+        .defaultValue("86400.0")
+        .units(Units::Second)
+        .description("Simulator timeout if no update is received");
 
         //bind<IMC::Announce>(this);
         bind<IMC::EstimatedState>(this);
@@ -111,7 +126,6 @@ namespace Simulators
         checkSystems();
 
         m_last_update.reset();
-        m_heading_timestamp.reset();
       }
 
       //! Release resources.
@@ -125,6 +139,9 @@ namespace Simulators
       onUpdateParameters(void)
       {
         checkSystems();
+
+        if (paramChanged(m_args.timeout))
+          m_last_update.setTop(m_args.timeout);
       }
 
       void
@@ -149,15 +166,41 @@ namespace Simulators
         if(m_args.virtual_enable)
         {
           m_sstate.setSource(m_source);
+          m_hb.setSource(m_source);
           m_announce.setSource(m_source);
           m_announce.sys_name = m_args.source_name;
           m_announce.owner = m_source;
+          debug("Virtual vehicle enabled: Source '%s', Target: '%s'", resolveSystemId(m_source), resolveSystemId(m_target));
         }
         else
         {
           m_sstate.setSource(m_target);
+          m_hb.setSource(m_target);
+          debug("Virtual vehicle disabled. Target: '%s'", resolveSystemId(m_target));
         }
       }
+
+      /*void
+      consume(const IMC::GpsFix* msg)
+      {
+        // Check if system is active and activate it if not
+        if (!isActive())
+          requestActivation();
+
+        if(msg->getSource() != m_target)
+          return;
+
+        debug("Consuming GPS-Fix from target.");
+
+        // Defining origin.
+        m_sstate.lat = msg->lat;
+        m_sstate.lon = msg->lon;
+        m_sstate.height = msg->height;
+
+        m_start_time = Clock::get();
+        m_last_update = Clock::get();
+        m_has_gps_fix = true;
+      }*/
 
       /*void
       consume(const DUNE::IMC::RemoteState* rs)
@@ -201,65 +244,89 @@ namespace Simulators
       void
       consume(const IMC::EstimatedState* msg)
       {
-        // Not the vehicle we are tracking
-        if (msg->getSource() != m_target)
+        trace("Consuming Estimated state from all systems.");
+
+        // Discard messages from this system
+        if(msg->getSource() == getSystemId())
           return;
 
-        m_last_update.reset();
-        m_last_known_lat = msg->lat;
-        m_last_known_lon = msg->lon;
-        m_last_known_speed = msg->u;
+        // Not the vehicle we are tracking
+        if (msg->getSource() != m_target)
+        {
+          debug("Received EstimatedState from %s", resolveSystemId(msg->getSource()));
+          return;
+        }
+
+        debug("Consuming EstimatedState from target.");
 
         m_estate = *msg;
+        m_has_updated_estimate = true;
+        m_last_update.reset();
       }
 
       void
       sendSimulatedState()
       {
-        double lat, lon, depth, x, y, theta, psi, u, w;
+        if(!m_has_first_estimate)
+          return;
 
-        // TODO 
-        lat = m_last_known_lat;
-        lon = m_last_known_lon;
-        u = m_last_known_speed;
+        double Ts = 0, dx = 0, dy = 0, dz = 0;
 
-        depth = 0; x = 0; y= 0; theta = 0; psi = 0; u = 0; w = 0; 
+        if(m_has_updated_estimate)
+        {
+          // TODO (use rotatation to body and u,v,w)
+          m_has_updated_estimate = false;
+          debug("Has an updated estimate.");
+        }
 
-        m_sstate.lat = lat;
-        m_sstate.lon = lon;
-        m_sstate.height = depth;
-        m_sstate.x = x;
-        m_sstate.y = y;
-        m_sstate.z = depth;
+        m_sstate.lat = m_estate.lat;
+        m_sstate.lon = m_estate.lon;
+        m_sstate.height = m_estate.height;
+        m_sstate.x = m_estate.x + Ts*dx;
+        m_sstate.y = m_estate.y + Ts*dy;
+        m_sstate.z = m_estate.z + Ts*dz;
         m_sstate.phi = 0;
-        m_sstate.theta = theta;
-        m_sstate.psi = psi;
-        m_sstate.u = u;
+        m_sstate.theta = m_estate.theta; // TODO: Change to plan theta
+        m_sstate.psi = m_estate.psi; // TODO: Change to plan psi
+        m_sstate.u = m_estate.u; // TODO: Change to plan u
         m_sstate.v = 0; 
-        m_sstate.w = w;
+        m_sstate.w = m_estate.w; // TODO: Change to plan w
         m_sstate.p = 0;
         m_sstate.q = 0;
         m_sstate.r = 0;
         m_sstate.svx = 0;
         m_sstate.svy = 0;
         m_sstate.svz = 0;
+        m_sstate.setTimeStamp();
+
+        dispatch(m_sstate);
       }
 
       void
       sendAnnounce()
       {
+        if(!m_has_first_estimate)
+          return;
+          
         if(!m_args.virtual_enable)
           return;
 
-        m_announce.lat = m_last_known_lat;
-        m_announce.lon = m_last_known_lon;
+        m_announce.lat = m_sstate.lat;
+        m_announce.lon = m_sstate.lon;
         m_announce.setTimeStamp();
+
+        dispatch(m_announce);
       }
 
       void 
       sendHeartBeat()
       {
-        // TODO
+        if(!m_has_first_estimate)
+          return;
+
+        m_hb.setTimeStamp();
+
+        dispatch(m_hb);
       }
 
       void
