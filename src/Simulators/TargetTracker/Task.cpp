@@ -28,6 +28,9 @@
 // DUNE headers.
 #include <DUNE/DUNE.hpp>
 
+#include "../../Plan/Engine/Plan.hpp"
+//#include "Plan.hpp"
+
 namespace Simulators
 {
   namespace TargetTracker
@@ -39,6 +42,8 @@ namespace Simulators
     {
       //! Target Name
       std::string target_name;
+      //! Target plan 
+      //std::string target_plan_id;
       //! Timeout 
       double timeout;
     };
@@ -54,7 +59,9 @@ namespace Simulators
       //! Target simulated state 
       IMC::SimulatedState m_sstate;
       //! Target plan 
-      IMC::PlanDB m_targetPlan;
+      Plan::Engine::Plan* m_target_plan;
+      //! Plan control 
+      //IMC::PlanControl m_plan_ctrl; 
       //! the last Clock::get() when the target system's position was updated
       Counter<double> m_last_update;
       //! variable that will hold the last known latittude
@@ -67,27 +74,35 @@ namespace Simulators
       bool m_has_update;
       //! Is a plan received?
       bool m_has_plan;
+      //! Has tracking maneuver started? 
+      bool m_tracking_started;
 
       Task(const std::string& name, Tasks::Context& ctx):
         Tasks::Periodic(name, ctx),
+        m_target_plan(NULL),
         m_last_known_lat(0),
         m_last_known_lon(0),
         m_last_known_height(0),
         m_has_update(false),
-        m_has_plan(false)
+        m_has_plan(false),
+        m_tracking_started(false)
       {
         param("Target Name", m_args.target_name)
-        .description("Target Name (system to be followed)");
+        .description("Target Name (system to be followed).");
+        
+        //param("Target Plan", m_args.target_plan_id)
+        //.description("Target Plan ID (name of plan target will follow).");
 
         param("Timeout", m_args.timeout)
         .defaultValue("86400.0")
         .units(Units::Second)
         .description("Simulator timeout if no update is received");
 
-        bind<IMC::PlanDB>(this);
+        //bind<IMC::PlanDB>(this);
         bind<IMC::EstimatedState>(this);
         bind<IMC::UsblFixExtended>(this);
-        
+        bind<IMC::PlanControl>(this);
+        bind<IMC::FollowSystem>(this);
       }
 
       //! Acquire resources
@@ -120,7 +135,7 @@ namespace Simulators
       {
         m_target = resolveSystemName(m_args.target_name);
 
-        if(m_target == DUNE::IMC::AddressResolver::invalid())
+        if(m_target == IMC::AddressResolver::invalid())
         {
           err("Target is invalid. Check if system name: '%s' exist.", m_args.target_name.c_str());
           return;
@@ -128,6 +143,32 @@ namespace Simulators
 
         m_sstate.setSource(m_target);
         debug("Target: '%s'", resolveSystemId(m_target));
+      }
+
+      void 
+      consume(const DUNE::IMC::FollowSystem *msg)
+      {
+        if(msg->system != m_target)
+        {
+          err("Target is not the same as defined in FollowSystem: %s", resolveSystemId(msg->getSource()));
+        }
+
+        m_tracking_started = true;
+      }
+      
+      void 
+      consume(const IMC::PlanControl *msg)
+      {
+        // Not the vehicle we are tracking
+        if (msg->getSource() != m_target)
+          return;
+
+        if(msg->type == IMC::PlanControl::PC_SUCCESS)
+        {
+          debug("PlanControl success! Name: '%s'", msg->plan_id.c_str());
+
+          m_has_plan = true;
+        }
       }
 
       void
@@ -147,6 +188,19 @@ namespace Simulators
 
         m_has_update = true;
         m_last_update.reset();
+
+        // Request plan if we don't have a copy
+        if(!m_has_plan && m_tracking_started)
+        {
+          DUNE::IMC::PlanControl req;
+          req.type = IMC::PlanControl::PC_REQUEST;
+          req.op = IMC::PlanControl::PC_GET;
+          //req.plan_id = m_args.target_plan_id;
+          //req.flags = IMC::PlanControl::FLG_IGNORE_ERRORS;
+          req.setSource(getSystemId());
+          req.setDestination(m_target);
+          dispatch(req);
+        }
       }
 
       void 
