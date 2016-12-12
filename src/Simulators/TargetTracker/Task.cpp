@@ -171,16 +171,20 @@ namespace Simulators
       }
 
       void 
-      consume(const IMC::PlanDB* msg)
+      consume(const IMC::PlanDB* req)
       {
         // Not the vehicle we are tracking
-        if (msg->getSource() != m_target)
+        if (req->getSource() != m_target)
           return;
 
-        debug("Consuming PlanDB from target: '%s'.", resolveSystemId(msg->getSource()));
+        if (req->type != IMC::PlanDB::DBT_REQUEST)
+        {
+          war(DTR("unexpected message"));
+          return;
+        }
 
-        // TODO
-
+        debug("Consuming PlanDB from target: '%s'.", resolveSystemId(req->getSource()));
+ 
         m_has_plan = true;
       }
 
