@@ -1543,7 +1543,6 @@ namespace Control
           }
           else
           {
-            err(DTR("Controlling an unknown vehicle type."));
             return;
           }
 

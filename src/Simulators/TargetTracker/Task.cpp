@@ -29,7 +29,6 @@
 #include <DUNE/DUNE.hpp>
 
 #include "../../Plan/Engine/Plan.hpp"
-//#include "Plan.hpp"
 
 namespace Simulators
 {
@@ -56,12 +55,8 @@ namespace Simulators
       uint16_t m_target;
       //! Target estimated state 
       IMC::EstimatedState m_estate;
-      //! Target simulated state 
-      IMC::SimulatedState m_sstate;
       //! Target plan 
-      Plan::Engine::Plan* m_target_plan;
-      //! Plan control 
-      //IMC::PlanControl m_plan_ctrl; 
+      Plan::Engine::Plan *m_target_plan;
       //! the last Clock::get() when the target system's position was updated
       Counter<double> m_last_update;
       //! variable that will hold the last known latittude
@@ -98,10 +93,9 @@ namespace Simulators
         .units(Units::Second)
         .description("Simulator timeout if no update is received");
 
-        //bind<IMC::PlanDB>(this);
+        bind<IMC::PlanDB>(this);
         bind<IMC::EstimatedState>(this);
         bind<IMC::UsblFixExtended>(this);
-        bind<IMC::PlanControl>(this);
         bind<IMC::FollowSystem>(this);
       }
 
@@ -118,7 +112,7 @@ namespace Simulators
       void
       onResourceRelease(void)
       {
-        ;
+        Memory::clear(m_target_plan);
       }
 
       void
@@ -146,30 +140,42 @@ namespace Simulators
       }
 
       void 
-      consume(const DUNE::IMC::FollowSystem *msg)
+      consume(const IMC::FollowSystem *msg)
       {
         if(msg->system != m_target)
         {
           err("Target is not the same as defined in FollowSystem: %s", resolveSystemId(msg->getSource()));
         }
 
-        m_tracking_started = true;
-      }
-      
-      void 
-      consume(const IMC::PlanControl *msg)
-      {
-        // Not the vehicle we are tracking
-        if (msg->getSource() != m_target)
-          return;
-
-        debug("PlanControl type = %i. Name: '%s'", msg->type, msg->plan_id.c_str());
-
-        if(msg->type == IMC::PlanControl::PC_SUCCESS)
+        if(!m_tracking_started)
         {
-          debug("PlanControl success! Name: '%s'", msg->plan_id.c_str());
+          m_tracking_started = true;
+          debug("Tracking of system '%s' started.", resolveSystemId(m_target));
+        }
+      }
 
-          m_has_plan = true;
+      void
+      consume(const IMC::PlanDB *req)
+      {
+        if(req->getDestination() != getSystemId())
+        {
+          return;
+        }
+
+        if(req->type == IMC::PlanDB::DBT_REQUEST)
+        {
+          if(req->op == IMC::PlanDB::DBOP_SET)
+          {
+            debug("Plan Id = '%s'", req->plan_id.c_str());
+
+            const IMC::PlanSpecification *spec = 0;
+
+            if(!req->arg.get(spec))
+              err("No plan spesification given.");
+
+            m_target_plan = new Plan::Engine::Plan(spec, false, false, 100, this, 10, &m_ctx.config);
+            m_has_plan = true;
+          }
         }
       }
 
@@ -190,21 +196,6 @@ namespace Simulators
 
         m_has_update = true;
         m_last_update.reset();
-
-        // Request plan if we don't have a copy
-        if(!m_has_plan && m_tracking_started)
-        {
-          DUNE::IMC::PlanControl req;
-          req.type = IMC::PlanControl::PC_REQUEST;
-          req.op = IMC::PlanControl::PC_GET;
-          //req.plan_id = m_args.target_plan_id;
-          //req.flags = IMC::PlanControl::FLG_IGNORE_ERRORS;
-          req.setSource(getSystemId());
-          req.setDestination(m_target);
-          dispatch(req);
-          
-          debug("Plan request sent.");
-        }
       }
 
       void 
@@ -228,26 +219,8 @@ namespace Simulators
         m_last_update.reset();
       }
 
-      void 
-      consume(const IMC::PlanDB* req)
-      {
-        // Not the vehicle we are tracking
-        if (req->getSource() != m_target)
-          return;
-
-        if (req->type != IMC::PlanDB::DBT_REQUEST)
-        {
-          war(DTR("unexpected message"));
-          return;
-        }
-
-        debug("Consuming PlanDB from target: '%s'.", resolveSystemId(req->getSource()));
- 
-        m_has_plan = true;
-      }
-
       void
-      sendSimulatedState()
+      sendAUVEstimatedState()
       {
         if(!m_has_update || !m_has_plan)
           return;
@@ -295,7 +268,7 @@ namespace Simulators
       void
       task(void)
       {
-        sendSimulatedState();
+        sendAUVEstimatedState();
       }
     };
   }
