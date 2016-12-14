@@ -42,9 +42,15 @@ namespace Simulators
       //! Target Name
       std::string target_name;
       //! Target plan 
-      //std::string target_plan_id;
+      std::string target_plan_id;
       //! Timeout 
       double timeout;
+      //! Recovery plan
+      //std::string recovery_plan;
+      //! Entity label of the plan generator.
+      std::string label_gen;
+      //! Absolute maximum depth.
+      float max_depth;
     };
 
     struct Task: public Tasks::Periodic
@@ -85,13 +91,16 @@ namespace Simulators
         param("Target Name", m_args.target_name)
         .description("Target Name (system to be followed).");
         
-        //param("Target Plan", m_args.target_plan_id)
-        //.description("Target Plan ID (name of plan target will follow).");
+        param("Target Plan", m_args.target_plan_id)
+        .description("Target Plan ID (name of plan target will follow).");
 
         param("Timeout", m_args.timeout)
         .defaultValue("86400.0")
         .units(Units::Second)
         .description("Simulator timeout if no update is received");
+
+        //m_ctx.config.get("General", "Recovery Plan", "dislodge", m_args.recovery_plan);
+        m_ctx.config.get("General", "Absolute Maximum Depth", "100.0", m_args.max_depth);
 
         bind<IMC::PlanDB>(this);
         bind<IMC::EstimatedState>(this);
@@ -135,7 +144,7 @@ namespace Simulators
           return;
         }
 
-        m_sstate.setSource(m_target);
+        m_estate.setSource(m_target);
         debug("Target: '%s'", resolveSystemId(m_target));
       }
 
@@ -229,27 +238,24 @@ namespace Simulators
 
         propagateAlongPlan(x, y, z, theta, psi, u, w);
 
-        m_sstate.lat = m_last_known_lat;
-        m_sstate.lon = m_last_known_lat;
-        m_sstate.height = m_last_known_height;
-        m_sstate.x = x;
-        m_sstate.y = y;
-        m_sstate.z = z;
-        m_sstate.phi = 0;
-        m_sstate.theta = theta;
-        m_sstate.psi = psi;
-        m_sstate.u = u;
-        m_sstate.v = 0; 
-        m_sstate.w = w;
-        m_sstate.p = 0;
-        m_sstate.q = 0;
-        m_sstate.r = 0;
-        m_sstate.svx = 0;
-        m_sstate.svy = 0;
-        m_sstate.svz = 0;
-        m_sstate.setTimeStamp();
+        m_estate.lat = m_last_known_lat;
+        m_estate.lon = m_last_known_lat;
+        m_estate.height = m_last_known_height;
+        m_estate.x = x;
+        m_estate.y = y;
+        m_estate.z = z;
+        m_estate.phi = 0;
+        m_estate.theta = theta;
+        m_estate.psi = psi;
+        m_estate.u = u;
+        m_estate.v = 0; 
+        m_estate.w = w;
+        m_estate.p = 0;
+        m_estate.q = 0;
+        m_estate.r = 0;
+        m_estate.setTimeStamp();
 
-        dispatch(m_sstate);
+        dispatch(m_estate);
       }
 
       void
