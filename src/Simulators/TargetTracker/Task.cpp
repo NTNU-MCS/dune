@@ -76,7 +76,7 @@ namespace Simulators
       //! Is a plan received?
       bool m_has_plan;
       //! Has tracking maneuver started? 
-      bool m_tracking_started;
+      bool m_has_tracking_started;
 
       Task(const std::string& name, Tasks::Context& ctx):
         Tasks::Periodic(name, ctx),
@@ -86,7 +86,7 @@ namespace Simulators
         m_last_known_height(0),
         m_has_update(false),
         m_has_plan(false),
-        m_tracking_started(false)
+        m_has_tracking_started(false)
       {
         param("Target Name", m_args.target_name)
         .description("Target Name (system to be followed).");
@@ -105,7 +105,8 @@ namespace Simulators
         bind<IMC::PlanDB>(this);
         bind<IMC::EstimatedState>(this);
         bind<IMC::UsblFixExtended>(this);
-        bind<IMC::FollowSystem>(this);
+        //bind<IMC::FollowSystem>(this);
+        bind<IMC::ManeuverControlState>(this);
       }
 
       //! Acquire resources
@@ -148,7 +149,7 @@ namespace Simulators
         debug("Target: '%s'", resolveSystemId(m_target));
       }
 
-      void 
+      /*void 
       consume(const IMC::FollowSystem *msg)
       {
         if(msg->system != m_target)
@@ -161,15 +162,13 @@ namespace Simulators
           m_tracking_started = true;
           debug("Tracking of system '%s' started.", resolveSystemId(m_target));
         }
-      }
+      }*/
 
       void
       consume(const IMC::PlanDB *req)
       {
         if(req->getDestination() != getSystemId())
-        {
           return;
-        }
 
         if(req->type == IMC::PlanDB::DBT_REQUEST)
         {
@@ -186,6 +185,26 @@ namespace Simulators
             m_has_plan = true;
           }
         }
+      }
+
+      void
+      consume(const IMC::ManeuverControlState *msg)
+      {
+        if(msg->getDestination() != m_target)
+          return;
+
+        debug("Consuming IMC::ManeuverControlState from target: '%s'", resolveSystemId(m_target));
+
+        if(msg->state == IMC::ManeuverControlState::MCS_EXECUTING && !m_has_tracking_started)
+        {
+          IMC::PlanManeuver* pman = m_target_plan->loadStartManeuver();
+          m_target_plan->maneuverStarted(pman->maneuver_id);
+
+          debug("Starting maneuver: '%s'", pman->maneuver_id.c_str());
+
+          m_has_tracking_started = true;
+        }
+
       }
 
       void
