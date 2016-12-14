@@ -163,6 +163,8 @@ namespace Simulators
         if (msg->getSource() != m_target)
           return;
 
+        debug("PlanControl type = %i. Name: '%s'", msg->type, msg->plan_id.c_str());
+
         if(msg->type == IMC::PlanControl::PC_SUCCESS)
         {
           debug("PlanControl success! Name: '%s'", msg->plan_id.c_str());
@@ -200,6 +202,8 @@ namespace Simulators
           req.setSource(getSystemId());
           req.setDestination(m_target);
           dispatch(req);
+          
+          debug("Plan request sent.");
         }
       }
 
