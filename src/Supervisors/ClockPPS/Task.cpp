@@ -79,6 +79,8 @@ namespace Supervisors
       std::string pps_dev;
       //! Number of GPS time offsets to compute.
       unsigned gps_offset_count;
+      //! GPS entity label.
+      std::string elabel_gps;
       //! Command to execute when time is synchronized.
       std::string time_sync_cmd;
       //! PPS propagation delay.
@@ -97,6 +99,8 @@ namespace Supervisors
       int m_timex_status;
       //! PPS consumer.
       LinuxPPS* m_pps;
+      //! GPS entity id.
+      int m_gps_eid;
       //! Task arguments.
       Arguments m_args;
 
@@ -130,6 +134,10 @@ namespace Supervisors
         param("GPS Offset Count", m_args.gps_offset_count)
         .defaultValue("10")
         .description("Number of GPS samples to compute time offser");
+
+        param("Entity Label - GPS", m_args.elabel_gps)
+        .defaultValue("GPS")
+        .description("The entity label of the GPS");
 
         param("Execute On Synchronization", m_args.time_sync_cmd)
         .description("System command to execute everytime the clock is synchronized");
@@ -168,10 +176,23 @@ namespace Supervisors
       }
 
       void
+      onEntityResolution(void)
+      {
+        try
+        {
+          m_gps_eid = resolveEntity(m_args.elabel_gps);
+        }
+        catch (...)
+        {
+          m_gps_eid = -1;
+        }
+      }
+
+      void
       consume(const IMC::GpsFix* msg)
       {
         // Only use fixes from local system.
-        if (msg->getSource() != getSystemId())
+        if (msg->getSource() != getSystemId() || msg->getSourceEntity() != (int)m_gps_eid)
           return;
 
         computeTimeOffset(msg);
