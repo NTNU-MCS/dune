@@ -140,7 +140,7 @@ namespace Control
         //! Control loops message
         IMC::ControlLoops m_controllps;
         //! TCP socket
-        Network::TCPSocket* m_TCP_sock;
+        DUNE::Network::TCPSocket* m_TCP_sock;
         //! System ID
         uint8_t m_sysid;
         //! Last received position
@@ -333,10 +333,13 @@ namespace Control
         {
           try
           {
+            Memory::clear(m_TCP_sock);
+            Delay::wait(1);
             m_TCP_sock = new TCPSocket;
             m_TCP_sock->connect(m_args.TCP_addr, m_args.TCP_port);
             m_TCP_sock->setNoDelay(true);
             setupRate(m_args.trate);
+            setEntityState(IMC::EntityState::ESTA_BOOT, "Boot");
             inf(DTR("Ardupilot interface initialized"));
           }
           catch (...)
@@ -928,7 +931,7 @@ namespace Control
         int
         sendData(uint8_t* bfr, int size)
         {
-          if (m_TCP_sock)
+          if (m_TCP_sock && !stopping())
           {
             spew("Sending something");
             return m_TCP_sock->write((char*)bfr, size);
@@ -939,7 +942,7 @@ namespace Control
         int
         receiveData(uint8_t* buf, size_t blen)
         {
-          if (m_TCP_sock)
+          if (m_TCP_sock && !stopping())
           {
             try
             {
@@ -1130,7 +1133,7 @@ namespace Control
 
           if (now - m_last_pkt_time >= m_args.comm_timeout)
           {
-            if (!m_error_missing)
+            if (!m_error_missing && !m_reboot)
             {
               setEntityState(IMC::EntityState::ESTA_ERROR, Status::CODE_MISSING_DATA);
               m_error_missing = true;
@@ -1659,8 +1662,8 @@ namespace Control
           if (m_fix.utc_year>2014)
             m_fix.validity |= (IMC::GpsFix::GFV_VALID_TIME | IMC::GpsFix::GFV_VALID_DATE);
 
-          if (!m_args.hitl)
-            dispatch(m_fix);
+         // if (!m_args.hitl)
+            //dispatch(m_fix);
         }
 
         void
