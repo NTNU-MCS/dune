@@ -155,7 +155,7 @@ namespace Supervisors
         }
         catch (std::exception& e)
         {
-          throw RestartNeeded(e.what(), 5.0, false);
+          throw RestartNeeded(e.what(), 5.0);
         }
 
         struct timex tmx;
