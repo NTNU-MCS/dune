@@ -1662,8 +1662,8 @@ namespace Control
           if (m_fix.utc_year>2014)
             m_fix.validity |= (IMC::GpsFix::GFV_VALID_TIME | IMC::GpsFix::GFV_VALID_DATE);
 
-         // if (!m_args.hitl)
-            //dispatch(m_fix);
+          if (!m_args.hitl)
+            dispatch(m_fix);
         }
 
         void
