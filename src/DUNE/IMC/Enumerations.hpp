@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: 0432e8918a29c5db5e9a394e816b76e7                            *
+// IMC XML MD5: 8805f1c931380756faddc280e1b0377f                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_ENUMERATIONS_HPP_INCLUDED_
@@ -110,6 +110,17 @@ namespace DUNE
       RSSIUNITS_dB = 0,
       //! Percentage.
       RSSIUNITS_PERCENTAGE = 1
+    };
+
+    //! UAV Type.
+    enum UAVType
+    {
+      //! Fixed-Wing.
+      UAVTYPE_FIXEDWING = 0,
+      //! Copter.
+      UAVTYPE_COPTER = 1,
+      //! Vtol.
+      UAVTYPE_VTOL = 2
     };
   }
 }

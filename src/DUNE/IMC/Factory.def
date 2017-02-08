@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: 0432e8918a29c5db5e9a394e816b76e7                            *
+// IMC XML MD5: 8805f1c931380756faddc280e1b0377f                            *
 //***************************************************************************
 
 MESSAGE(1, EntityState)
@@ -135,6 +135,9 @@ MESSAGE(293, GpsFixRtk)
 MESSAGE(294, ExternalNavData)
 MESSAGE(295, DissolvedOxygen)
 MESSAGE(296, AirSaturation)
+MESSAGE(297, Throttle)
+MESSAGE(298, PH)
+MESSAGE(299, Redox)
 MESSAGE(300, CameraZoom)
 MESSAGE(301, SetThrusterActuation)
 MESSAGE(302, SetServoPosition)
@@ -220,6 +223,12 @@ MESSAGE(485, Launch)
 MESSAGE(486, Drop)
 MESSAGE(487, ScheduledGoto)
 MESSAGE(488, RowsCoverage)
+MESSAGE(489, Sample)
+MESSAGE(490, ImageTracking)
+MESSAGE(491, Takeoff)
+MESSAGE(492, Land)
+MESSAGE(493, AutonomousSection)
+MESSAGE(494, FollowPoint)
 MESSAGE(500, VehicleState)
 MESSAGE(501, VehicleCommand)
 MESSAGE(502, MonitorEntityState)
@@ -302,6 +311,11 @@ MESSAGE(897, GetWorldCoordinates)
 MESSAGE(898, UsblAnglesExtended)
 MESSAGE(899, UsblPositionExtended)
 MESSAGE(900, UsblFixExtended)
+MESSAGE(901, UsblModem)
+MESSAGE(902, UsblConfig)
+MESSAGE(903, DissolvedOrganicMatter)
+MESSAGE(904, OpticalBackscatter)
+MESSAGE(905, Tachograph)
 MESSAGE(6001, HighpassControlParcel)
 MESSAGE(6002, ReconStatus)
 MESSAGE(6003, ReconCommand)

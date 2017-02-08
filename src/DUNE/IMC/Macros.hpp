@@ -26,7 +26,7 @@
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: 0432e8918a29c5db5e9a394e816b76e7                            *
+// IMC XML MD5: 8805f1c931380756faddc280e1b0377f                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_MACROS_HPP_INCLUDED_
@@ -244,6 +244,12 @@
 #define DUNE_IMC_DISSOLVEDOXYGEN 295
 //! AirSaturation identification number.
 #define DUNE_IMC_AIRSATURATION 296
+//! Throttle identification number.
+#define DUNE_IMC_THROTTLE 297
+//! PH identification number.
+#define DUNE_IMC_PH 298
+//! Redox identification number.
+#define DUNE_IMC_REDOX 299
 //! CameraZoom identification number.
 #define DUNE_IMC_CAMERAZOOM 300
 //! SetThrusterActuation identification number.
@@ -414,6 +420,18 @@
 #define DUNE_IMC_SCHEDULEDGOTO 487
 //! RowsCoverage identification number.
 #define DUNE_IMC_ROWSCOVERAGE 488
+//! Sample identification number.
+#define DUNE_IMC_SAMPLE 489
+//! ImageTracking identification number.
+#define DUNE_IMC_IMAGETRACKING 490
+//! Takeoff identification number.
+#define DUNE_IMC_TAKEOFF 491
+//! Land identification number.
+#define DUNE_IMC_LAND 492
+//! AutonomousSection identification number.
+#define DUNE_IMC_AUTONOMOUSSECTION 493
+//! FollowPoint identification number.
+#define DUNE_IMC_FOLLOWPOINT 494
 //! VehicleState identification number.
 #define DUNE_IMC_VEHICLESTATE 500
 //! VehicleCommand identification number.
@@ -578,6 +596,16 @@
 #define DUNE_IMC_USBLPOSITIONEXTENDED 899
 //! UsblFixExtended identification number.
 #define DUNE_IMC_USBLFIXEXTENDED 900
+//! UsblModem identification number.
+#define DUNE_IMC_USBLMODEM 901
+//! UsblConfig identification number.
+#define DUNE_IMC_USBLCONFIG 902
+//! DissolvedOrganicMatter identification number.
+#define DUNE_IMC_DISSOLVEDORGANICMATTER 903
+//! OpticalBackscatter identification number.
+#define DUNE_IMC_OPTICALBACKSCATTER 904
+//! Tachograph identification number.
+#define DUNE_IMC_TACHOGRAPH 905
 //! HighpassControlParcel identification number.
 #define DUNE_IMC_HIGHPASSCONTROLPARCEL 6001
 //! ReconStatus identification number.
