@@ -61,6 +61,8 @@ namespace Simulators
       uint16_t m_target;
       //! Target estimated state 
       IMC::EstimatedState m_estate;
+      //! Target plan control state 
+      IMC::PlanControlState m_targetPcs;
       //! Target plan 
       Plan::Engine::Plan *m_target_plan;
       //! the last Clock::get() when the target system's position was updated
@@ -99,14 +101,14 @@ namespace Simulators
         .units(Units::Second)
         .description("Simulator timeout if no update is received");
 
-        //m_ctx.config.get("General", "Recovery Plan", "dislodge", m_args.recovery_plan);
         m_ctx.config.get("General", "Absolute Maximum Depth", "100.0", m_args.max_depth);
 
         bind<IMC::PlanDB>(this);
         bind<IMC::EstimatedState>(this);
         bind<IMC::UsblFixExtended>(this);
         //bind<IMC::FollowSystem>(this);
-        bind<IMC::ManeuverControlState>(this);
+        //bind<IMC::ManeuverControlState>(this);
+        bind<IMC::PlanControlState>(this);
       }
 
       //! Acquire resources
@@ -179,7 +181,10 @@ namespace Simulators
             const IMC::PlanSpecification *spec = 0;
 
             if(!req->arg.get(spec))
+            {
               err("No plan spesification given.");
+              return;
+            }
 
             m_target_plan = new Plan::Engine::Plan(spec, false, false, 100, this, 10, &m_ctx.config);
             m_has_plan = true;
@@ -187,24 +192,15 @@ namespace Simulators
         }
       }
 
-      void
-      consume(const IMC::ManeuverControlState *msg)
+      void 
+      consume(const IMC::PlanControlState *msg)
       {
         if(msg->getDestination() != m_target)
           return;
 
-        debug("Consuming IMC::ManeuverControlState from target: '%s'", resolveSystemId(m_target));
+        trace("Consuming IMC::PlanControlState from target: '%s'", resolveSystemId(m_target));
 
-        if(msg->state == IMC::ManeuverControlState::MCS_EXECUTING && !m_has_tracking_started)
-        {
-          IMC::PlanManeuver* pman = m_target_plan->loadStartManeuver();
-          m_target_plan->maneuverStarted(pman->maneuver_id);
-
-          debug("Starting maneuver: '%s'", pman->maneuver_id.c_str());
-
-          m_has_tracking_started = true;
-        }
-
+        m_targetPcs = *msg;
       }
 
       void
