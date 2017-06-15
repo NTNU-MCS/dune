@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2017 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -8,18 +8,20 @@
 // Licencees holding valid commercial DUNE licences may use this file in    *
 // accordance with the commercial licence agreement provided with the       *
 // Software or, alternatively, in accordance with the terms contained in a  *
-// written agreement between you and Universidade do Porto. For licensing   *
-// terms, conditions, and further information contact lsts@fe.up.pt.        *
+// written agreement between you and Faculdade de Engenharia da             *
+// Universidade do Porto. For licensing terms, conditions, and further      *
+// information contact lsts@fe.up.pt.                                       *
 //                                                                          *
-// European Union Public Licence - EUPL v.1.1 Usage                         *
-// Alternatively, this file may be used under the terms of the EUPL,        *
-// Version 1.1 only (the "Licence"), appearing in the file LICENCE.md       *
+// Modified European Union Public Licence - EUPL v.1.1 Usage                *
+// Alternatively, this file may be used under the terms of the Modified     *
+// EUPL, Version 1.1 only (the "Licence"), appearing in the file LICENCE.md *
 // included in the packaging of this file. You may not use this work        *
 // except in compliance with the Licence. Unless required by applicable     *
 // law or agreed to in writing, software distributed under the Licence is   *
 // distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF     *
 // ANY KIND, either express or implied. See the Licence for the specific    *
 // language governing permissions and limitations at                        *
+// https://github.com/LSTS/dune/blob/master/LICENCE.md and                  *
 // http://ec.europa.eu/idabc/eupl.html.                                     *
 //***************************************************************************
 // Author: Aníbal Matos (original LBL filter circa 1999)                    *
@@ -166,8 +168,6 @@ namespace Navigation
         bool m_usbl_reading;
         //! Moving average for vehicle forward speed.
         MovingAverage<double>* m_avg_speed;
-        //! Medium handler.
-        Monitors::MediumHandler m_medium;
         //! Task arguments.
         Arguments m_args;
 
@@ -248,7 +248,6 @@ namespace Navigation
 
           // Register callbacks
           bind<IMC::EntityActivationState>(this);
-          bind<IMC::VehicleMedium>(this);
         }
 
         void
@@ -344,8 +343,7 @@ namespace Navigation
             return;
 
           if ((msg->state == IMC::EntityActivationState::EAS_ACTIVE ||
-               msg->state == IMC::EntityActivationState::EAS_ACT_DONE)
-              && !m_medium.outWater())
+               msg->state == IMC::EntityActivationState::EAS_ACT_DONE))
           {
             // IMU already activated.
             if (m_dead_reckoning)
@@ -391,12 +389,6 @@ namespace Navigation
             for (unsigned i = 0; i < m_ranging.getSize(); i++)
               m_kal.setMeasurementNoise(NUM_OUT + i, m_measure_noise[MN_LBL]);
           }
-        }
-
-        void
-        consume(const IMC::VehicleMedium* msg)
-        {
-          m_medium.update(msg);
         }
 
         bool
