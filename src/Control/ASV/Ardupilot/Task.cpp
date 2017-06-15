@@ -68,19 +68,6 @@ namespace Control
         RO_MODE_INITIALISING = 16
       };
 
-      //! Radio Channel structure.
-      /*struct RadioChannel
-      {
-        //! PWM range
-        int pwm_min;
-        int pwm_max;
-        //! Value range
-        float val_max;
-        float val_min;
-        //! Channel reverse
-        bool reverse;
-      };*/
-
       //! %Task arguments.
       struct Arguments
       {
@@ -110,6 +97,10 @@ namespace Control
         double longitude;
         //! Default speed setpoint
         double speed_default;
+        //! Enable heading/speed c_control 
+        bool enable_heading_speed_control;
+        //! Lookahead distance for yaw c_controllable
+        double lookahead;
 
       };
 
@@ -142,10 +133,14 @@ namespace Control
         IMC::PathControlState m_pcs;
         //! DesiredPath message
         IMC::DesiredPath m_dpath;
+        //! DesiredHeading message
+        IMC::DesiredHeading m_desHeading;
         //! DesiredPath message
+        IMC::DesiredSpeed m_desSpeed;
+        //! Control loops message
         IMC::ControlLoops m_controllps;
         //! TCP socket
-        Network::TCPSocket* m_TCP_sock;
+        DUNE::Network::TCPSocket* m_TCP_sock;
         //! System ID
         uint8_t m_sysid;
         //! Last received position
@@ -270,6 +265,15 @@ namespace Control
           .defaultValue("1.5")
           .description("Default speed setpoint to use");
 
+          param("Enable heading/speed control of vehicle", m_args.enable_heading_speed_control)
+          .defaultValue("false")
+          .description("Enable heading/speed control of vehicle");
+
+          param("Lookahead distance for yaw control", m_args.lookahead)
+          .defaultValue("200.0")
+          .units(Units::Meter)
+          .description("Used for calculating a waypoint a lookahead distance away from the rover.");
+
           //! Setup packet handlers
           //! IMPORTANT: set up function to handle each type of MAVLINK packet here
           m_mlh[MAVLINK_MSG_ID_ATTITUDE] = &Task::handleAttitudePacket;
@@ -293,6 +297,8 @@ namespace Control
 
           //! Setup processing of IMC messages
           bind<DesiredPath>(this);
+          bind<DesiredHeading>(this);
+          bind<DesiredSpeed>(this);
           bind<ControlLoops>(this);
           bind<VehicleState>(this);
           bind<SimulatedState>(this);
@@ -327,10 +333,13 @@ namespace Control
         {
           try
           {
+            Memory::clear(m_TCP_sock);
+            Delay::wait(1);
             m_TCP_sock = new TCPSocket;
             m_TCP_sock->connect(m_args.TCP_addr, m_args.TCP_port);
             m_TCP_sock->setNoDelay(true);
             setupRate(m_args.trate);
+            setEntityState(IMC::EntityState::ESTA_BOOT, "Boot");
             inf(DTR("Ardupilot interface initialized"));
           }
           catch (...)
@@ -523,6 +532,16 @@ namespace Control
                                                     0);//! RC Channel 8 (mode)
               uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
               sendData(buf, n);
+
+              //! Set GUIDED mode
+              mavlink_msg_set_mode_pack(255, 0, &msg,
+                                        m_sysid,
+                                        1,
+                                        RO_MODE_GUIDED); //! DUNE mode on ardurover is 15
+
+              n = mavlink_msg_to_send_buffer(buf, &msg);
+              sendData(buf, n);
+              debug("Guided MODE on ardupilot is set");
             }
           }
 
@@ -583,6 +602,11 @@ namespace Control
         void
         consume(const IMC::DesiredPath* path)
         {
+          if(m_args.enable_heading_speed_control)
+          {
+            return;
+          }
+
           if (m_external)
           {
             m_dpath = *path;
@@ -605,16 +629,6 @@ namespace Control
           uint8_t buf[512];
           mavlink_message_t msg;
 
-          //! Set GUIDED mode
-          mavlink_msg_set_mode_pack(255, 0, &msg,
-                                    m_sysid,
-                                    1,
-                                    RO_MODE_GUIDED); //! DUNE mode on ardurover is 15
-
-          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
-          sendData(buf, n);
-          debug("Guided MODE on ardupilot is set");
-
           //! Setting speed setpoint parameter
           mavlink_msg_param_set_pack(255, 0, &msg,
                                      m_sysid, //! target_system System ID
@@ -623,7 +637,7 @@ namespace Control
                                      path->speed, //! Parameter value
                                      MAV_PARAM_TYPE_REAL32); //! Parameter type
 
-          n = mavlink_msg_to_send_buffer(buf, &msg);
+          uint16_t n = mavlink_msg_to_send_buffer(buf, &msg);
           sendData(buf, n);
 
           m_dspeed = path->speed;
@@ -667,6 +681,121 @@ namespace Control
           m_last_wp = Clock::get();
 
           debug("Waypoint packet sent to Ardupilot");
+        }
+
+        void 
+        consume(const IMC::DesiredHeading *msg)
+        {
+          if(!m_args.enable_heading_speed_control)
+          {
+            return;
+          }
+
+          if (m_external)
+          {
+            m_desHeading = *msg;
+            inf(DTR("ArduPilot is in Manual mode, saving desired heading."));
+            return;
+          }
+
+          if (!((m_cloops & IMC::CL_PATH) && m_args.ardu_tracker))
+          {
+            inf(DTR("path control is NOT active"));
+            return;
+          }
+
+          if(m_vehicle_type != VEHICLE_ROVER)
+          {
+            inf(DTR("unknown vehicle type"));
+            return;
+          }
+
+          uint8_t buf[512];
+          mavlink_message_t mvmsg;
+
+          double lat, lon, depth;
+          
+          lat = m_estate.lat;
+          lon = m_estate.lon;
+          depth = m_estate.z;
+
+          WGS84::displace(m_args.lookahead*cos(msg->value), m_args.lookahead*sin(msg->value), 0, &lat, &lon, &depth);
+          
+          mavlink_msg_mission_item_pack(255, 0, &mvmsg,
+                                          m_sysid, //! target_system System ID
+                                          0, //! target_component Component ID
+                                          1, //! seq Sequence
+                                          MAV_FRAME_GLOBAL, //! frame The coordinate system of the MISSION. see MAV_FRAME in mavlink_types.h
+                                          MAV_CMD_NAV_WAYPOINT, //! command The scheduled action for the MISSION. see MAV_CMD in ardupilotmega.h
+                                          2, //! current false:0, true:1, guided mode:2
+                                          0, //! autocontinue to next wp
+                                          0, //! p1 - Radius of acceptance? Think not used.
+                                          0, //! Not used
+                                          0, // direction does not matter for rover.
+                                          0, //! Not used
+                                          (float)Angles::degrees(lat), //! x PARAM5 / local: x position, global: latitude
+                                          (float)Angles::degrees(lon), //! y PARAM6 / y position: global: longitude
+                                          depth);//! z PARAM7 / z position: global: altitude
+
+          uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
+          sendData(buf, n);
+
+          debug("Yaw setpoint: %f sent to Ardupilot", (float)Angles::degrees(msg->value));
+        }
+
+        void
+        consume(const IMC::DesiredSpeed *msg)
+        {
+          if(!m_args.enable_heading_speed_control)
+          {
+            return;
+          }
+
+          if (m_external)
+          {
+            m_desSpeed = *msg;
+            inf(DTR("ArduPilot is in Manual mode, saving desired speed."));
+            return;
+          }
+
+          if (!((m_cloops & IMC::CL_PATH) && m_args.ardu_tracker))
+          {
+            inf(DTR("path control is NOT active"));
+            return;
+          }
+
+          if(m_vehicle_type != VEHICLE_ROVER)
+          {
+            inf(DTR("unknown vehicle type"));
+            return;
+          }
+
+          double speed;
+
+          if(msg->speed_units == Units::Knot)
+          {
+            speed = msg->value*(1/Units::c_ms_to_knot);
+          }
+          else
+          {
+            speed = msg->value;
+          }
+
+          uint8_t buf[512];
+          mavlink_message_t mvmsg;
+
+          //! Setting speed setpoint parameter
+          mavlink_msg_param_set_pack(255, 0, &mvmsg,
+                                      m_sysid, //! target_system System ID
+                                      0, //! target_component Component ID
+                                      "CRUISE_SPEED", //! Parameter name
+                                      (float)speed, //! Parameter value
+                                      MAV_PARAM_TYPE_REAL32); //! Parameter type
+
+          uint16_t n = mavlink_msg_to_send_buffer(buf, &mvmsg);
+          sendData(buf, n);
+
+          debug("Speed setpoint: %f sent to Ardupilot.", (float)speed);
         }
 
         //! Used for HITL simulations
@@ -802,7 +931,7 @@ namespace Control
         int
         sendData(uint8_t* bfr, int size)
         {
-          if (m_TCP_sock)
+          if (m_TCP_sock && !stopping())
           {
             spew("Sending something");
             return m_TCP_sock->write((char*)bfr, size);
@@ -813,7 +942,7 @@ namespace Control
         int
         receiveData(uint8_t* buf, size_t blen)
         {
-          if (m_TCP_sock)
+          if (m_TCP_sock && !stopping())
           {
             try
             {
@@ -1004,7 +1133,7 @@ namespace Control
 
           if (now - m_last_pkt_time >= m_args.comm_timeout)
           {
-            if (!m_error_missing)
+            if (!m_error_missing && !m_reboot)
             {
               setEntityState(IMC::EntityState::ESTA_ERROR, Status::CODE_MISSING_DATA);
               m_error_missing = true;
@@ -1224,7 +1353,7 @@ namespace Control
           mavlink_command_ack_t cmd_ack;
 
           mavlink_msg_command_ack_decode(msg, &cmd_ack);
-          debug("Command %d was received, result is %d", cmd_ack.command, cmd_ack.result);
+          trace("Command %d was received, result is %d", cmd_ack.command, cmd_ack.result);
           m_changing_wp = false;
           m_last_wp = 0;
         }
@@ -1235,7 +1364,7 @@ namespace Control
           mavlink_mission_ack_t miss_ack;
 
           mavlink_msg_mission_ack_decode(msg, &miss_ack);
-          debug("Mission was received, result is %d", miss_ack.type);
+          trace("Mission was received, result is %d", miss_ack.type);
           m_changing_wp = false;
           m_last_wp = 0;
         }
@@ -1417,7 +1546,6 @@ namespace Control
           }
           else
           {
-            err(DTR("Controlling an unknown vehicle type."));
             return;
           }
 
