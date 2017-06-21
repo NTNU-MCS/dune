@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2017 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -8,25 +8,27 @@
 // Licencees holding valid commercial DUNE licences may use this file in    *
 // accordance with the commercial licence agreement provided with the       *
 // Software or, alternatively, in accordance with the terms contained in a  *
-// written agreement between you and Universidade do Porto. For licensing   *
-// terms, conditions, and further information contact lsts@fe.up.pt.        *
+// written agreement between you and Faculdade de Engenharia da             *
+// Universidade do Porto. For licensing terms, conditions, and further      *
+// information contact lsts@fe.up.pt.                                       *
 //                                                                          *
-// European Union Public Licence - EUPL v.1.1 Usage                         *
-// Alternatively, this file may be used under the terms of the EUPL,        *
-// Version 1.1 only (the "Licence"), appearing in the file LICENCE.md       *
+// Modified European Union Public Licence - EUPL v.1.1 Usage                *
+// Alternatively, this file may be used under the terms of the Modified     *
+// EUPL, Version 1.1 only (the "Licence"), appearing in the file LICENCE.md *
 // included in the packaging of this file. You may not use this work        *
 // except in compliance with the Licence. Unless required by applicable     *
 // law or agreed to in writing, software distributed under the Licence is   *
 // distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF     *
 // ANY KIND, either express or implied. See the Licence for the specific    *
 // language governing permissions and limitations at                        *
+// https://github.com/LSTS/dune/blob/master/LICENCE.md and                  *
 // http://ec.europa.eu/idabc/eupl.html.                                     *
 //***************************************************************************
 // Author: Ricardo Martins                                                  *
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: 6aaa9c7287633275734709db667b9953                            *
+// IMC XML MD5: d292e724592557940354dddbfc5a9d32                            *
 //***************************************************************************
 
 // ISO C++ 98 headers.
@@ -24462,6 +24464,149 @@ namespace DUNE
       IMC::toJSON(os__, "rpm_min", rpm_min, nindent__);
       IMC::toJSON(os__, "rpm_max", rpm_max, nindent__);
       IMC::toJSON(os__, "depth_max", depth_max, nindent__);
+    }
+
+    ApmStatus::ApmStatus(void)
+    {
+      m_header.mgid = 906;
+      clear();
+    }
+
+    void
+    ApmStatus::clear(void)
+    {
+      severity = 0;
+      text.clear();
+    }
+
+    bool
+    ApmStatus::fieldsEqual(const Message& msg__) const
+    {
+      const IMC::ApmStatus& other__ = static_cast<const ApmStatus&>(msg__);
+      if (severity != other__.severity) return false;
+      if (text != other__.text) return false;
+      return true;
+    }
+
+    int
+    ApmStatus::validate(void) const
+    {
+      return true;
+    }
+
+    uint8_t*
+    ApmStatus::serializeFields(uint8_t* bfr__) const
+    {
+      uint8_t* ptr__ = bfr__;
+      ptr__ += IMC::serialize(severity, ptr__);
+      ptr__ += IMC::serialize(text, ptr__);
+      return ptr__;
+    }
+
+    uint16_t
+    ApmStatus::deserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(severity, bfr__, size__);
+      bfr__ += IMC::deserialize(text, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    uint16_t
+    ApmStatus::reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(severity, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(text, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    void
+    ApmStatus::fieldsToJSON(std::ostream& os__, unsigned nindent__) const
+    {
+      IMC::toJSON(os__, "severity", severity, nindent__);
+      IMC::toJSON(os__, "text", text, nindent__);
+    }
+
+    SadcReadings::SadcReadings(void)
+    {
+      m_header.mgid = 907;
+      clear();
+    }
+
+    void
+    SadcReadings::clear(void)
+    {
+      channel = 0;
+      value = 0;
+      gain = 0;
+    }
+
+    bool
+    SadcReadings::fieldsEqual(const Message& msg__) const
+    {
+      const IMC::SadcReadings& other__ = static_cast<const SadcReadings&>(msg__);
+      if (channel != other__.channel) return false;
+      if (value != other__.value) return false;
+      if (gain != other__.gain) return false;
+      return true;
+    }
+
+    int
+    SadcReadings::validate(void) const
+    {
+      if (channel < 1 || channel > 4) return false;
+      return true;
+    }
+
+    uint8_t*
+    SadcReadings::serializeFields(uint8_t* bfr__) const
+    {
+      uint8_t* ptr__ = bfr__;
+      ptr__ += IMC::serialize(channel, ptr__);
+      ptr__ += IMC::serialize(value, ptr__);
+      ptr__ += IMC::serialize(gain, ptr__);
+      return ptr__;
+    }
+
+    uint16_t
+    SadcReadings::deserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(channel, bfr__, size__);
+      bfr__ += IMC::deserialize(value, bfr__, size__);
+      bfr__ += IMC::deserialize(gain, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    uint16_t
+    SadcReadings::reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__)
+    {
+      const uint8_t* start__ = bfr__;
+      bfr__ += IMC::deserialize(channel, bfr__, size__);
+      bfr__ += IMC::reverseDeserialize(value, bfr__, size__);
+      bfr__ += IMC::deserialize(gain, bfr__, size__);
+      return bfr__ - start__;
+    }
+
+    fp64_t
+    SadcReadings::getValueFP(void) const
+    {
+      return static_cast<fp64_t>(value);
+    }
+
+    void
+    SadcReadings::setValueFP(fp64_t val)
+    {
+      value = static_cast<int32_t>(val);
+    }
+
+    void
+    SadcReadings::fieldsToJSON(std::ostream& os__, unsigned nindent__) const
+    {
+      IMC::toJSON(os__, "channel", channel, nindent__);
+      IMC::toJSON(os__, "value", value, nindent__);
+      IMC::toJSON(os__, "gain", gain, nindent__);
     }
   }
 }

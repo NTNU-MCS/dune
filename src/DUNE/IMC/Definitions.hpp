@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2017 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -8,25 +8,27 @@
 // Licencees holding valid commercial DUNE licences may use this file in    *
 // accordance with the commercial licence agreement provided with the       *
 // Software or, alternatively, in accordance with the terms contained in a  *
-// written agreement between you and Universidade do Porto. For licensing   *
-// terms, conditions, and further information contact lsts@fe.up.pt.        *
+// written agreement between you and Faculdade de Engenharia da             *
+// Universidade do Porto. For licensing terms, conditions, and further      *
+// information contact lsts@fe.up.pt.                                       *
 //                                                                          *
-// European Union Public Licence - EUPL v.1.1 Usage                         *
-// Alternatively, this file may be used under the terms of the EUPL,        *
-// Version 1.1 only (the "Licence"), appearing in the file LICENCE.md       *
+// Modified European Union Public Licence - EUPL v.1.1 Usage                *
+// Alternatively, this file may be used under the terms of the Modified     *
+// EUPL, Version 1.1 only (the "Licence"), appearing in the file LICENCE.md *
 // included in the packaging of this file. You may not use this work        *
 // except in compliance with the Licence. Unless required by applicable     *
 // law or agreed to in writing, software distributed under the Licence is   *
 // distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF     *
 // ANY KIND, either express or implied. See the Licence for the specific    *
 // language governing permissions and limitations at                        *
+// https://github.com/LSTS/dune/blob/master/LICENCE.md and                  *
 // http://ec.europa.eu/idabc/eupl.html.                                     *
 //***************************************************************************
 // Author: Ricardo Martins                                                  *
 //***************************************************************************
 // Automatically generated.                                                 *
 //***************************************************************************
-// IMC XML MD5: 6aaa9c7287633275734709db667b9953                            *
+// IMC XML MD5: d292e724592557940354dddbfc5a9d32                            *
 //***************************************************************************
 
 #ifndef DUNE_IMC_DEFINITIONS_HPP_INCLUDED_
@@ -4473,7 +4475,9 @@ namespace DUNE
         //! Message Send -- Failure.
         AOP_MSG_FAILURE = 15,
         //! Send Short Message.
-        AOP_MSG_SHORT = 16
+        AOP_MSG_SHORT = 16,
+        //! Initiate Reverse Range.
+        AOP_REVERSE_RANGE = 17
       };
 
       //! Operation.
@@ -22962,6 +22966,178 @@ namespace DUNE
       {
         return 64;
       }
+
+      void
+      fieldsToJSON(std::ostream& os__, unsigned nindent__) const;
+    };
+
+    //! APM Status.
+    class ApmStatus: public Message
+    {
+    public:
+      //! Severity.
+      enum SeverityEnum
+      {
+        //! Emergency.
+        APM_EMERGENCY = 0,
+        //! Alert.
+        APM_ALERT = 1,
+        //! Critical.
+        APM_CRITICAL = 2,
+        //! Error.
+        APM_ERROR = 3,
+        //! Warning.
+        APM_WARNING = 4,
+        //! Notice.
+        APM_NOTICE = 5,
+        //! Info.
+        APM_INFO = 6,
+        //! Debug.
+        APM_DEBUG = 7
+      };
+
+      //! Severity.
+      uint8_t severity;
+      //! Text.
+      std::string text;
+
+      static uint16_t
+      getIdStatic(void)
+      {
+        return 906;
+      }
+
+      ApmStatus(void);
+
+      Message*
+      clone(void) const
+      {
+        return new ApmStatus(*this);
+      }
+
+      void
+      clear(void);
+
+      bool
+      fieldsEqual(const Message& msg__) const;
+
+      int
+      validate(void) const;
+
+      uint8_t*
+      serializeFields(uint8_t* bfr__) const;
+
+      uint16_t
+      deserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      getId(void) const
+      {
+        return ApmStatus::getIdStatic();
+      }
+
+      const char*
+      getName(void) const
+      {
+        return "ApmStatus";
+      }
+
+      unsigned
+      getFixedSerializationSize(void) const
+      {
+        return 1;
+      }
+
+      unsigned
+      getVariableSerializationSize(void) const
+      {
+        return IMC::getSerializationSize(text);
+      }
+
+      void
+      fieldsToJSON(std::ostream& os__, unsigned nindent__) const;
+    };
+
+    //! SADC Readings.
+    class SadcReadings: public Message
+    {
+    public:
+      //! Gain.
+      enum GainEnum
+      {
+        //! x1.
+        GAIN_X1 = 0,
+        //! x10.
+        GAIN_X10 = 1,
+        //! x100.
+        GAIN_X100 = 2
+      };
+
+      //! Channel.
+      int8_t channel;
+      //! Value.
+      int32_t value;
+      //! Gain.
+      uint8_t gain;
+
+      static uint16_t
+      getIdStatic(void)
+      {
+        return 907;
+      }
+
+      SadcReadings(void);
+
+      Message*
+      clone(void) const
+      {
+        return new SadcReadings(*this);
+      }
+
+      void
+      clear(void);
+
+      bool
+      fieldsEqual(const Message& msg__) const;
+
+      int
+      validate(void) const;
+
+      uint8_t*
+      serializeFields(uint8_t* bfr__) const;
+
+      uint16_t
+      deserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      reverseDeserializeFields(const uint8_t* bfr__, uint16_t size__);
+
+      uint16_t
+      getId(void) const
+      {
+        return SadcReadings::getIdStatic();
+      }
+
+      const char*
+      getName(void) const
+      {
+        return "SadcReadings";
+      }
+
+      unsigned
+      getFixedSerializationSize(void) const
+      {
+        return 6;
+      }
+
+      fp64_t
+      getValueFP(void) const;
+
+      void
+      setValueFP(fp64_t val);
 
       void
       fieldsToJSON(std::ostream& os__, unsigned nindent__) const;
