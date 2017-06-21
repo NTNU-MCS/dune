@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2007-2017 Universidade do Porto - Faculdade de Engenharia      *
+// Copyright 2007-2016 Universidade do Porto - Faculdade de Engenharia      *
 // Laboratório de Sistemas e Tecnologia Subaquática (LSTS)                  *
 //***************************************************************************
 // This file is part of DUNE: Unified Navigation Environment.               *
@@ -8,20 +8,18 @@
 // Licencees holding valid commercial DUNE licences may use this file in    *
 // accordance with the commercial licence agreement provided with the       *
 // Software or, alternatively, in accordance with the terms contained in a  *
-// written agreement between you and Faculdade de Engenharia da             *
-// Universidade do Porto. For licensing terms, conditions, and further      *
-// information contact lsts@fe.up.pt.                                       *
+// written agreement between you and Universidade do Porto. For licensing   *
+// terms, conditions, and further information contact lsts@fe.up.pt.        *
 //                                                                          *
-// Modified European Union Public Licence - EUPL v.1.1 Usage                *
-// Alternatively, this file may be used under the terms of the Modified     *
-// EUPL, Version 1.1 only (the "Licence"), appearing in the file LICENCE.md *
+// European Union Public Licence - EUPL v.1.1 Usage                         *
+// Alternatively, this file may be used under the terms of the EUPL,        *
+// Version 1.1 only (the "Licence"), appearing in the file LICENCE.md       *
 // included in the packaging of this file. You may not use this work        *
 // except in compliance with the Licence. Unless required by applicable     *
 // law or agreed to in writing, software distributed under the Licence is   *
 // distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF     *
 // ANY KIND, either express or implied. See the Licence for the specific    *
 // language governing permissions and limitations at                        *
-// https://github.com/LSTS/dune/blob/master/LICENCE.md and                  *
 // http://ec.europa.eu/idabc/eupl.html.                                     *
 //***************************************************************************
 // Author: Ricardo Martins                                                  *
@@ -338,7 +336,7 @@ namespace Sensors
         if (std::sscanf(str.c_str(), "%02d%lf", &degrees, &minutes) != 2)
           return false;
 
-        dst = Angles::convertDMSToDecimal(degrees, minutes);
+        dst = Angles::radians(Angles::convertDMSToDecimal(degrees, minutes));
 
         if (h == "S")
           dst = -dst;
@@ -360,7 +358,7 @@ namespace Sensors
         if (std::sscanf(str.c_str(), "%03d%lf", &degrees, &minutes) != 2)
           return false;
 
-        dst = Angles::convertDMSToDecimal(degrees, minutes);
+        dst = Angles::radians(Angles::convertDMSToDecimal(degrees, minutes));
 
         if (h == "W")
           dst = -dst;
@@ -502,9 +500,21 @@ namespace Sensors
           }
 
           if (m_fix.validity & IMC::GpsFix::GFV_VALID_POS)
-            setEntityState(IMC::EntityState::ESTA_NORMAL, Status::CODE_ACTIVE);
+          {
+            std::string text;
+            if (m_fix.validity & IMC::GpsFix::GFV_VALID_HACC &&
+                m_fix.validity & IMC::GpsFix::GFV_VALID_HDOP)
+              text = String::str(DTR("active | satellites: %u | accuracy: %.1f | hdop: %.1f"),
+                                 m_fix.satellites, m_fix.hacc, m_fix.hdop);
+            else
+              text = String::str(DTR("active | satellites: %u"), m_fix.satellites);
+
+            setEntityState(IMC::EntityState::ESTA_NORMAL, text);
+          }
           else
+          {
             setEntityState(IMC::EntityState::ESTA_NORMAL, Status::CODE_WAIT_GPS_FIX);
+          }
         }
       }
 
@@ -572,9 +582,6 @@ namespace Sensors
           if (readNumber(parts[11], geoid_sep))
             m_fix.height += geoid_sep;
 
-          // Convert coordinates to radians.
-          m_fix.lat = Angles::radians(m_fix.lat);
-          m_fix.lon = Angles::radians(m_fix.lon);
           m_fix.validity |= IMC::GpsFix::GFV_VALID_POS;
         }
         else
@@ -612,16 +619,9 @@ namespace Sensors
             && readLongitude(parts[5], parts[6], m_fix.lon)
             && readNumber(parts[7], m_fix.height)
             && readDecimal(parts[18], m_fix.satellites))
-        {
-          // Convert coordinates to radians.
-          m_fix.lat = Angles::radians(m_fix.lat);
-          m_fix.lon = Angles::radians(m_fix.lon);
           m_fix.validity |= IMC::GpsFix::GFV_VALID_POS;
-        }
         else
-        {
           m_fix.validity &= ~IMC::GpsFix::GFV_VALID_POS;
-        }
 
         if (readNumber(parts[9], m_fix.hacc))
           m_fix.validity |= IMC::GpsFix::GFV_VALID_HACC;
